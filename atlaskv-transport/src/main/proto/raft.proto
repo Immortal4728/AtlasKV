@@ -1,0 +1,61 @@
+syntax = "proto3";
+
+package com.atlaskv.transport.proto;
+
+option java_multiple_files = true;
+option java_package = "com.atlaskv.transport.proto";
+option java_outer_classname = "RaftProto";
+
+service RaftService {
+    rpc RequestVote (RequestVoteProtoArgs) returns (RequestVoteProtoReply);
+    rpc AppendEntries (AppendEntriesProtoArgs) returns (AppendEntriesProtoReply);
+    rpc InstallSnapshot (InstallSnapshotProtoArgs) returns (InstallSnapshotProtoReply);
+}
+
+message RequestVoteProtoArgs {
+    int64 term = 1;
+    string candidate_id = 2;
+    int64 last_log_index = 3;
+    int64 last_log_term = 4;
+}
+
+message RequestVoteProtoReply {
+    int64 term = 1;
+    bool vote_granted = 2;
+}
+
+message LogEntryProto {
+    int64 index = 1;
+    int64 term = 2;
+    bytes command = 3;
+}
+
+message AppendEntriesProtoArgs {
+    int64 term = 1;
+    string leader_id = 2;
+    int64 prev_log_index = 3;
+    int64 prev_log_term = 4;
+    repeated LogEntryProto entries = 5;
+    int64 leader_commit = 6;
+}
+
+message AppendEntriesProtoReply {
+    int64 term = 1;
+    bool success = 2;
+    int64 match_index = 3;
+}
+
+message InstallSnapshotProtoArgs {
+    int64 term = 1;
+    string leader_id = 2;
+    int64 last_included_index = 3;
+    int64 last_included_term = 4;
+    int32 offset = 5;
+    bytes data = 6;
+    bool done = 7;
+}
+
+message InstallSnapshotProtoReply {
+    int64 term = 1;
+    bool success = 2;
+}

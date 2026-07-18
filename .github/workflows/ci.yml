@@ -1,0 +1,60 @@
+name: AtlasKV CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build & Verify
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java-version: [ '21' ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java-version }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java-version }}
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Build & compile
+        run: ./mvnw clean compile --batch-mode --no-transfer-progress
+
+      - name: Run tests
+        run: ./mvnw test --batch-mode --no-transfer-progress
+
+      - name: Run Checkstyle
+        run: ./mvnw checkstyle:check --batch-mode --no-transfer-progress
+
+      - name: Run SpotBugs
+        run: ./mvnw spotbugs:check --batch-mode --no-transfer-progress
+
+      - name: Full verify
+        run: ./mvnw verify --batch-mode --no-transfer-progress
+
+      - name: Upload SpotBugs report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotbugs-reports
+          path: '**/target/spotbugsXml.xml'
+          retention-days: 7
+
+      - name: Upload Checkstyle report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: checkstyle-reports
+          path: '**/target/checkstyle-result.xml'
+          retention-days: 7

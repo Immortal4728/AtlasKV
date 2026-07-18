@@ -1,0 +1,20 @@
+# Use this workspace to collaborate
+workspace:
+  id: 80548ff4-3bce-42ae-8ef1-797214cbf496
+
+localResources:
+  specs:
+    - ../atlaskv-transport/src/main/proto/raft.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/any.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/api.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/descriptor.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/duration.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/empty.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/field_mask.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/source_context.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/struct.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/timestamp.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/type.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/protobuf-java-3.25.5-Tf40TCyWxutGw9x96uTIwNuEkGk/google/protobuf/wrappers.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/proto-google-common-protos-2.48.0-2YNcQH70mziBjfS1MF5bp1hJsOw/google/api/annotations.proto
+    - ../atlaskv-transport/target/protobuf-maven-plugin/generate/default/archives/proto-google-common-protos-2.48.0-2YNcQH70mziBjfS1MF5bp1hJsOw/google/api/auth.proto

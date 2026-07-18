@@ -1,0 +1,63 @@
+# =============================================================================
+# AtlasKV Server Configuration
+# =============================================================================
+
+spring:
+  application:
+    name: atlaskv-server
+  main:
+    banner-mode: off
+
+# ── HTTP Server ──────────────────────────────────────────────
+server:
+  port: 8080
+  shutdown: graceful
+
+# ── AtlasKV Node Configuration ──────────────────────────────
+atlaskv:
+  node:
+    id: node1
+
+  raft:
+    data-dir: ./data
+    # Named peer addresses: peerId -> host:port
+    peer-addresses: {}
+    # Simple peer list (auto-generates peer IDs)
+    peers: []
+    min-election-timeout-ms: 500
+    max-election-timeout-ms: 1000
+    heartbeat-interval-ms: 150
+    snapshot-threshold: 100
+    rpc-timeout-ms: 2000
+
+  server:
+    host: 0.0.0.0
+    grpc-port: 50051
+
+# ── OpenAPI / Swagger ────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# ── Actuator ─────────────────────────────────────────────────
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# ── Logging ──────────────────────────────────────────────────
+logging:
+  level:
+    com.atlaskv: INFO
+    io.grpc: WARN
+    org.springframework: DEBUG
+    org.springframework.beans: TRACE
+    org.springframework.beans.factory.support: TRACE

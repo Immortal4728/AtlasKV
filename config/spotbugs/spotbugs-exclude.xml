@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    AtlasKV SpotBugs Exclusion Filter
+    Excludes patterns that produce false positives with Java 21 records and sealed classes.
+-->
+<FindBugsFilter>
+    <!-- Exclude generated code (records generate equals/hashCode/toString) -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Or>
+            <Class name="~.*Record"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude test infrastructure from exposure bug checks -->
+    <Match>
+        <Package name="~com\.atlaskv\.test.*"/>
+        <Or>
+            <Bug pattern="URF_UNREAD_FIELD"/>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- Suppress mutable array and future warnings for byte[] and futures in event/rpc records -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+        <Or>
+            <Class name="com.atlaskv.core.rpc.AppendEntriesRequest"/>
+            <Class name="com.atlaskv.core.LogEntry"/>
+        </Or>
+    </Match>
+
+    <!-- Suppress EI_EXPOSE_REP / EI_EXPOSE_REP2 for RaftEvent records carrying CompletableFuture -->
+    <Match>
+        <Class name="~com\.atlaskv\.core\.event\.RaftEvent.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- Suppress EI_EXPOSE_REP / EI_EXPOSE_REP2 / IS2_INCONSISTENT_SYNC for pure engine core classes -->
+    <Match>
+        <Or>
+            <Class name="com.atlaskv.core.RaftNode"/>
+            <Class name="com.atlaskv.core.config.ClusterMembership"/>
+        </Or>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="IS2_INCONSISTENT_SYNC"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude generated Protobuf and gRPC classes in transport module -->
+    <Match>
+        <Package name="~com\.atlaskv\.transport\.proto.*"/>
+    </Match>
+
+    <!-- Exclude server lifecycle and config from mutable exposure checks -->
+    <Match>
+        <Package name="~com\.atlaskv\.server\.lifecycle.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+    <Match>
+        <Package name="~com\.atlaskv\.server\.config.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+    <Match>
+        <Package name="~com\.atlaskv\.server\.health.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude server API DTOs and controllers from exposure checks -->
+    <Match>
+        <Package name="~com\.atlaskv\.server\.api.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+    <Match>
+        <Package name="~com\.atlaskv\.server\.statemachine.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+</FindBugsFilter>
