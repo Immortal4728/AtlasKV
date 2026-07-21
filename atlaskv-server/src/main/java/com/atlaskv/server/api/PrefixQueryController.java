@@ -40,7 +40,6 @@ import java.util.concurrent.TimeoutException;
 public class PrefixQueryController {
 
     private static final long READ_TIMEOUT_SECONDS = 5;
-    private static final int DEFAULT_LIMIT = 100;
     private static final int MAX_LIMIT = 1000;
 
     private final NodeLifecycleManager lifecycleManager;

@@ -1,6 +1,5 @@
 package com.atlaskv.storage.snapshot;
 
-import com.atlaskv.core.storage.CorruptedStorageException;
 import com.atlaskv.core.storage.Snapshot;
 import com.atlaskv.core.storage.SnapshotMetadata;
 import org.junit.jupiter.api.BeforeEach;
@@ -14,7 +13,6 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileSnapshotStorageTest {

@@ -1,0 +1,43 @@
+# ── Version Control & IDE Configs ──────────────────────────────────────────────
+.git
+.github
+.gitignore
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings
+
+# ── Maven Build Outputs & Temporary Files ──────────────────────────────────
+**/target/
+target/
+**/out/
+out/
+.mvn/wrapper/maven-wrapper.jar
+checkstyle-result.xml
+checkstyle-cachefile
+spotbugsXml.xml
+
+# ── Logs & Database Data Directories ───────────────────────────────────────
+*.log
+*.err
+logs/
+data/
+**/data/
+
+# ── Node.js & Frontend Build Outputs ──────────────────────────────────────
+**/node_modules/
+node_modules/
+**/.next/
+.next/
+dist/
+
+# ── Local Documents & Scripts ──────────────────────────────────────────────
+*.pdf
+AtlasKV_Presentation.pdf
+start_nodes.ps1
+.postman/
+postman/

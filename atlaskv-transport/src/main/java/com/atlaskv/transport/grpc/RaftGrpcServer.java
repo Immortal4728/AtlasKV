@@ -19,7 +19,6 @@ public final class RaftGrpcServer implements AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(RaftGrpcServer.class);
     private static final long DEFAULT_SHUTDOWN_TIMEOUT_MS = 3000L;
 
-    private final int port;
     private final Server server;
 
     /**
@@ -29,7 +28,6 @@ public final class RaftGrpcServer implements AutoCloseable {
      * @param eventDispatcher consumer for inbound Raft events
      */
     public RaftGrpcServer(int port, Consumer<RaftEvent> eventDispatcher) {
-        this.port = port;
         Objects.requireNonNull(eventDispatcher, "EventDispatcher must not be null");
         this.server = ServerBuilder.forPort(port)
                 .addService(new RaftGrpcService(eventDispatcher))

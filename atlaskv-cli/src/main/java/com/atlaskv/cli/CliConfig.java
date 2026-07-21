@@ -52,7 +52,6 @@ public final class CliConfig {
      * @param configPath path to config file
      * @return loaded configuration
      */
-    @SuppressWarnings("unchecked")
     public static CliConfig load(Path configPath) {
         CliConfig config = new CliConfig();
 

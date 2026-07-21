@@ -23,55 +23,55 @@ class FilePersistentStateStoreTest {
     @DisplayName("loadState returns initial state when file does not exist")
     void loadNonExistent() {
         Path filePath = tempDir.resolve("metadata.dat");
-        FilePersistentStateStore store = new FilePersistentStateStore(filePath);
-
-        PersistentState state = store.loadState();
-        assertThat(state.currentTerm()).isEqualTo(0L);
-        assertThat(state.votedFor()).isNull();
+        try (FilePersistentStateStore store = new FilePersistentStateStore(filePath)) {
+            PersistentState state = store.loadState();
+            assertThat(state.currentTerm()).isEqualTo(0L);
+            assertThat(state.votedFor()).isNull();
+        }
     }
 
     @Test
     @DisplayName("saveState persists term and votedFor atomically and loadState recovers it")
     void saveAndLoad() {
         Path filePath = tempDir.resolve("metadata.dat");
-        FilePersistentStateStore store = new FilePersistentStateStore(filePath);
+        try (FilePersistentStateStore store = new FilePersistentStateStore(filePath)) {
+            PersistentState stateToSave = new PersistentState(3L, NodeId.of("node-1"));
+            store.saveState(stateToSave);
 
-        PersistentState stateToSave = new PersistentState(3L, NodeId.of("node-1"));
-        store.saveState(stateToSave);
-
-        PersistentState loaded = store.loadState();
-        assertThat(loaded.currentTerm()).isEqualTo(3L);
-        assertThat(loaded.votedFor()).isEqualTo(NodeId.of("node-1"));
+            PersistentState loaded = store.loadState();
+            assertThat(loaded.currentTerm()).isEqualTo(3L);
+            assertThat(loaded.votedFor()).isEqualTo(NodeId.of("node-1"));
+        }
     }
 
     @Test
     @DisplayName("saveState can overwrite state with null votedFor")
     void saveAndLoadNullVote() {
         Path filePath = tempDir.resolve("metadata.dat");
-        FilePersistentStateStore store = new FilePersistentStateStore(filePath);
+        try (FilePersistentStateStore store = new FilePersistentStateStore(filePath)) {
+            store.saveState(new PersistentState(4L, NodeId.of("node-2")));
+            store.saveState(new PersistentState(5L, null));
 
-        store.saveState(new PersistentState(4L, NodeId.of("node-2")));
-        store.saveState(new PersistentState(5L, null));
-
-        PersistentState loaded = store.loadState();
-        assertThat(loaded.currentTerm()).isEqualTo(5L);
-        assertThat(loaded.votedFor()).isNull();
+            PersistentState loaded = store.loadState();
+            assertThat(loaded.currentTerm()).isEqualTo(5L);
+            assertThat(loaded.votedFor()).isNull();
+        }
     }
 
     @Test
     @DisplayName("loadState throws CorruptedStorageException when CRC32 checksum is corrupted")
     void corruptedCrcThrows() throws IOException {
         Path filePath = tempDir.resolve("metadata.dat");
-        FilePersistentStateStore store = new FilePersistentStateStore(filePath);
+        try (FilePersistentStateStore store = new FilePersistentStateStore(filePath)) {
+            store.saveState(new PersistentState(2L, NodeId.of("node-1")));
 
-        store.saveState(new PersistentState(2L, NodeId.of("node-1")));
+            byte[] bytes = Files.readAllBytes(filePath);
+            // Corrupt term byte
+            bytes[10] ^= 0xFF;
+            Files.write(filePath, bytes);
 
-        byte[] bytes = Files.readAllBytes(filePath);
-        // Corrupt term byte
-        bytes[10] ^= 0xFF;
-        Files.write(filePath, bytes);
-
-        assertThatThrownBy(store::loadState)
-                .isInstanceOf(CorruptedStorageException.class);
+            assertThatThrownBy(store::loadState)
+                    .isInstanceOf(CorruptedStorageException.class);
+        }
     }
 }

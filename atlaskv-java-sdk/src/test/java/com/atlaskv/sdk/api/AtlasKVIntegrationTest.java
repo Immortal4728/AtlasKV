@@ -161,7 +161,7 @@ class AtlasKVIntegrationTest {
     void testHistoryAndRollback() {
         client.keyValue().put("history_key", "v1");
         client.keyValue().put("history_key", "v2");
-        KeyValue v3 = client.keyValue().put("history_key", "v3");
+        client.keyValue().put("history_key", "v3");
 
         List<Revision> history = client.history().history("history_key");
         assertThat(history).hasSize(3);
