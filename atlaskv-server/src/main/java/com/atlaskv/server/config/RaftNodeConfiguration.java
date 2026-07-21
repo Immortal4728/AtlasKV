@@ -66,9 +66,16 @@ public class RaftNodeConfiguration {
 
         // Add peers from named map (peerId -> host:port)
         for (Map.Entry<String, String> entry : raft.getPeerAddresses().entrySet()) {
+            if (entry.getKey().equalsIgnoreCase(node.getId())) {
+                continue;
+            }
             InetSocketAddress addr = parseAddress(entry.getValue());
             builder.addPeer(entry.getKey(), addr.getHostString(), addr.getPort());
         }
+
+        // Parse PEER_NODES environment variable if present (supports format: id:host:port or id=host:port)
+        String peerNodesEnv = System.getenv("PEER_NODES");
+        parseAndAddPeers(peerNodesEnv, node.getId(), builder);
 
         // Add peers from simple list (auto-generated peer IDs)
         int peerIndex = 1;
@@ -107,6 +114,36 @@ public class RaftNodeConfiguration {
             ClusterConfig config, KeyValueStateMachine stateMachine) {
         LOG.info("Configured NodeLifecycleManager for node {}", config.nodeId());
         return new NodeLifecycleManager(config, stateMachine);
+    }
+
+    void parseAndAddPeers(String peerNodesEnv, String currentNodeId, ClusterConfig.Builder builder) {
+        if (peerNodesEnv == null || peerNodesEnv.isBlank()) {
+            return;
+        }
+        String[] peers = peerNodesEnv.split("[,;]");
+        for (String peer : peers) {
+            peer = peer.trim();
+            if (peer.isEmpty()) {
+                continue;
+            }
+            String peerId = null;
+            String peerAddr = null;
+            if (peer.contains("=")) {
+                String[] parts = peer.split("=", 2);
+                peerId = parts[0].trim();
+                peerAddr = parts[1].trim();
+            } else {
+                int firstColon = peer.indexOf(':');
+                if (firstColon > 0) {
+                    peerId = peer.substring(0, firstColon).trim();
+                    peerAddr = peer.substring(firstColon + 1).trim();
+                }
+            }
+            if (peerId != null && peerAddr != null && !peerId.equalsIgnoreCase(currentNodeId)) {
+                InetSocketAddress addr = parseAddress(peerAddr);
+                builder.addPeer(peerId, addr.getHostString(), addr.getPort());
+            }
+        }
     }
 
     private static InetSocketAddress parseAddress(String hostPort) {

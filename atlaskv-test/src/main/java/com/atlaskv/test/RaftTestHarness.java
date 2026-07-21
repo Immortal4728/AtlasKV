@@ -72,6 +72,11 @@ public final class RaftTestHarness implements AutoCloseable {
 
     public void handleEvent(RaftEvent event) {
         node.handleEvent(event);
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

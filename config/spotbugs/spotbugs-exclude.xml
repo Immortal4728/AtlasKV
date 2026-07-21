@@ -96,4 +96,41 @@
             <Bug pattern="EI_EXPOSE_REP2"/>
         </Or>
     </Match>
+    <Match>
+        <Package name="~com\.atlaskv\.server\.lease.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+    <Match>
+        <Package name="~com\.atlaskv\.server\.watch.*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude SDK classes from representation exposure checks -->
+    <Match>
+        <Package name="~com\.atlaskv\.sdk\..*"/>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+        </Or>
+    </Match>
+
+    <!-- Exclude CLI and Benchmarks classes from representation exposure and unread field checks -->
+    <Match>
+        <Or>
+            <Package name="~com\.atlaskv\.cli\..*"/>
+            <Package name="~com\.atlaskv\.benchmarks\..*"/>
+        </Or>
+        <Or>
+            <Bug pattern="EI_EXPOSE_REP"/>
+            <Bug pattern="EI_EXPOSE_REP2"/>
+            <Bug pattern="URF_UNREAD_FIELD"/>
+            <Bug pattern="UWF_UNREAD_FIELD"/>
+        </Or>
+    </Match>
 </FindBugsFilter>

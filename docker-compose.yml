@@ -1,32 +1,25 @@
 # ====================================================
 # AtlasKV 3-Node Cluster — Docker Compose
 # ====================================================
-#
-# Usage:
-#   docker-compose up -d
-#   docker-compose logs -f
-#   docker-compose down -v
-#
-# Access:
-#   Node 1 REST: http://localhost:8081
-#   Node 2 REST: http://localhost:8082
-#   Node 3 REST: http://localhost:8083
-#   Swagger UI:  http://localhost:8081/swagger-ui.html
-#
+
+version: '3.8'
 
 services:
   node1:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: atlaskv-node1
     ports:
       - "8081:8080"
       - "50051:50051"
     environment:
-      - ATLASKV_NODE_ID=node1
-      - ATLASKV_RAFT_DATA_DIR=/app/data
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE2=node2:50052
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE3=node3:50053
-      - ATLASKV_SERVER_GRPC_PORT=50051
+      - NODE_ID=node1
+      - REST_PORT=8080
+      - GRPC_PORT=50051
+      - DATA_DIRECTORY=/app/data
+      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - LOG_LEVEL=INFO
     volumes:
       - node1-data:/app/data
     networks:
@@ -34,39 +27,50 @@ services:
     restart: unless-stopped
 
   node2:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: atlaskv-node2
     ports:
       - "8082:8080"
       - "50052:50052"
     environment:
-      - ATLASKV_NODE_ID=node2
-      - ATLASKV_RAFT_DATA_DIR=/app/data
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE1=node1:50051
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE3=node3:50053
-      - ATLASKV_SERVER_GRPC_PORT=50052
+      - NODE_ID=node2
+      - REST_PORT=8080
+      - GRPC_PORT=50052
+      - DATA_DIRECTORY=/app/data
+      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - LOG_LEVEL=INFO
     volumes:
       - node2-data:/app/data
     networks:
       - atlaskv-net
+    depends_on:
+      - node1
     restart: unless-stopped
 
   node3:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: atlaskv-node3
     ports:
       - "8083:8080"
       - "50053:50053"
     environment:
-      - ATLASKV_NODE_ID=node3
-      - ATLASKV_RAFT_DATA_DIR=/app/data
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE1=node1:50051
-      - ATLASKV_RAFT_PEER_ADDRESSES_NODE2=node2:50052
-      - ATLASKV_SERVER_GRPC_PORT=50053
+      - NODE_ID=node3
+      - REST_PORT=8080
+      - GRPC_PORT=50053
+      - DATA_DIRECTORY=/app/data
+      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - LOG_LEVEL=INFO
     volumes:
       - node3-data:/app/data
     networks:
       - atlaskv-net
+    depends_on:
+      - node1
+      - node2
     restart: unless-stopped
 
 volumes:
@@ -79,4 +83,5 @@ volumes:
 
 networks:
   atlaskv-net:
+    name: atlaskv-net
     driver: bridge

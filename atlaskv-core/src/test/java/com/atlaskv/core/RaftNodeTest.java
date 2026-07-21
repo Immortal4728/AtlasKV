@@ -247,12 +247,13 @@ class RaftNodeTest {
 
         @Test
         @DisplayName("Non-leader rejects client commands")
-        void nonLeaderRejectsCommands() {
+        void nonLeaderRejectsCommands() throws InterruptedException {
             raftNode.start();
 
             CompletableFuture<byte[]> future = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set x 1".getBytes(StandardCharsets.UTF_8), future));
+            awaitCondition(future::isCompletedExceptionally);
 
             assertThat(future.isCompletedExceptionally()).isTrue();
         }
@@ -266,6 +267,7 @@ class RaftNodeTest {
             CompletableFuture<byte[]> clientFuture = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set x 42".getBytes(StandardCharsets.UTF_8), clientFuture));
+            awaitCondition(() -> logStorage.getLastLogIndex() == 2L);
 
             assertThat(logStorage.getLastLogIndex()).isEqualTo(2L);
             assertThat(logStorage.getTermAt(2)).isEqualTo(1L);
@@ -281,9 +283,11 @@ class RaftNodeTest {
             CompletableFuture<byte[]> clientFuture = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set x 42".getBytes(StandardCharsets.UTF_8), clientFuture));
+            awaitCondition(() -> logStorage.getLastLogIndex() == 2L);
 
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
                     peer1, new AppendEntriesReply(1L, true, 2L)));
+            awaitCondition(clientFuture::isDone);
 
             assertThat(clientFuture.isDone()).isTrue();
             assertThat(clientFuture.join()).isNotNull();
@@ -298,10 +302,12 @@ class RaftNodeTest {
 
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set x 1".getBytes(StandardCharsets.UTF_8), new CompletableFuture<>()));
+            awaitCondition(() -> logStorage.getLastLogIndex() == 2L);
 
             int countBefore = transport.sentAppendEntries.size();
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
                     peer1, new AppendEntriesReply(1L, false, 0L)));
+            awaitCondition(() -> transport.sentAppendEntries.size() > countBefore);
 
             assertThat(transport.sentAppendEntries.size()).isGreaterThan(countBefore);
         }
@@ -310,14 +316,16 @@ class RaftNodeTest {
         @DisplayName("Pending commands fail when leader steps down")
         void pendingCommandsFailOnStepDown() throws InterruptedException {
             becomeLeader();
-
+ 
             CompletableFuture<byte[]> clientFuture = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set x 1".getBytes(StandardCharsets.UTF_8), clientFuture));
-
+            awaitCondition(() -> logStorage.getLastLogIndex() == 2L);
+ 
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
                     peer1, new AppendEntriesReply(5L, false, 0L)));
-
+            awaitCondition(clientFuture::isCompletedExceptionally);
+ 
             assertThat(raftNode.role()).isEqualTo(RaftRole.FOLLOWER);
             assertThat(clientFuture.isCompletedExceptionally()).isTrue();
         }
@@ -331,11 +339,12 @@ class RaftNodeTest {
 
         @Test
         @DisplayName("Non-leader rejects ReadIndex request")
-        void nonLeaderRejectsReadIndex() {
+        void nonLeaderRejectsReadIndex() throws InterruptedException {
             raftNode.start();
 
             CompletableFuture<Long> future = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientReadIndexEvent(future));
+            awaitCondition(future::isCompletedExceptionally);
 
             assertThat(future.isCompletedExceptionally()).isTrue();
         }
@@ -347,9 +356,11 @@ class RaftNodeTest {
 
             CompletableFuture<Long> readFuture = new CompletableFuture<>();
             raftNode.handleEvent(new RaftEvent.ClientReadIndexEvent(readFuture));
+            awaitCondition(() -> !transport.sentAppendEntries.isEmpty());
 
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
                     peer1, new AppendEntriesReply(1L, true, 1L)));
+            awaitCondition(readFuture::isDone);
 
             assertThat(readFuture.isDone()).isTrue();
             assertThat(readFuture.join()).isNotNull();
@@ -377,6 +388,7 @@ class RaftNodeTest {
             // peer1 says it has replicated index 1
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
                     peer1, new AppendEntriesReply(2L, true, 1L)));
+            Thread.sleep(50);
 
             // commitIndex should NOT advance because entry 1 is from term 1, not current term 2
             assertThat(raftNode.commitIndex()).isEqualTo(0L);
@@ -389,23 +401,35 @@ class RaftNodeTest {
 
             raftNode.handleEvent(new RaftEvent.ClientCommandEvent(
                     "set k v".getBytes(StandardCharsets.UTF_8), new CompletableFuture<>()));
+            awaitCondition(() -> logStorage.getLastLogIndex() == 2L);
 
             raftNode.handleEvent(new RaftEvent.InboundAppendEntriesReplyEvent(
-                    peer1, new AppendEntriesReply(1L, true, 1L)));
+                    peer1, new AppendEntriesReply(1L, true, 2L)));
+            awaitCondition(() -> raftNode.commitIndex() == 2L);
 
-            assertThat(raftNode.commitIndex()).isEqualTo(1L);
+            assertThat(raftNode.commitIndex()).isEqualTo(2L);
         }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
+    private void awaitCondition(java.util.function.Supplier<Boolean> condition) throws InterruptedException {
+        long start = System.currentTimeMillis();
+        while (!condition.get()) {
+            if (System.currentTimeMillis() - start > 2000) {
+                throw new AssertionError("Condition not met within timeout");
+            }
+            Thread.sleep(5);
+        }
+    }
+
     private void becomeLeader() throws InterruptedException {
         raftNode.start();
         clock.advanceTime(Duration.ofMillis(350));
-        Thread.sleep(100);
+        awaitCondition(() -> transport.pendingVotes.containsKey(peer1));
 
         transport.replyRequestVote(peer1, new RequestVoteReply(1L, true));
-        Thread.sleep(100);
+        awaitCondition(() -> raftNode.role() == RaftRole.LEADER);
 
         assertThat(raftNode.role()).isEqualTo(RaftRole.LEADER);
     }
@@ -423,11 +447,11 @@ class RaftNodeTest {
 
         // Trigger election at the target term
         clock.advanceTime(Duration.ofMillis(350));
-        Thread.sleep(100);
+        awaitCondition(() -> transport.pendingVotes.containsKey(peer1));
 
         assertThat(raftNode.currentTerm()).isEqualTo(term);
         transport.replyRequestVote(peer1, new RequestVoteReply(term, true));
-        Thread.sleep(100);
+        awaitCondition(() -> raftNode.role() == RaftRole.LEADER);
 
         assertThat(raftNode.role()).isEqualTo(RaftRole.LEADER);
         assertThat(raftNode.currentTerm()).isEqualTo(term);

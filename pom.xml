@@ -43,6 +43,9 @@
         <module>atlaskv-server</module>
         <module>atlaskv-client</module>
         <module>atlaskv-test</module>
+        <module>atlaskv-java-sdk</module>
+        <module>atlaskv-cli</module>
+        <module>atlaskv-benchmarks</module>
     </modules>
 
     <!-- ================================================================== -->

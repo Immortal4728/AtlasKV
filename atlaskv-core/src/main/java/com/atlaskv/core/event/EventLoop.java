@@ -75,6 +75,13 @@ public final class EventLoop implements AutoCloseable {
     }
 
     /**
+     * Returns true if the current thread is the event loop's worker thread.
+     */
+    public boolean isEventLoopThread() {
+        return Thread.currentThread() == workerThread;
+    }
+
+    /**
      * Stops the event loop and waits for the worker thread to finish.
      */
     @Override

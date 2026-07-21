@@ -1,0 +1,45 @@
+{
+  "name": "atlaskv-ts-sdk",
+  "version": "0.1.0",
+  "description": "Official TypeScript/JavaScript client library for AtlasKV distributed key-value store",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint \"src/**/*.ts\"",
+    "lint:fix": "eslint \"src/**/*.ts\" --fix"
+  },
+  "keywords": [
+    "atlaskv",
+    "raft",
+    "key-value",
+    "sdk",
+    "typescript",
+    "distributed"
+  ],
+  "author": "Google Deepmind team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.0",
+    "tsup": "^8.1.0",
+    "typescript": "^5.5.3",
+    "vitest": "^2.0.4"
+  }
+}

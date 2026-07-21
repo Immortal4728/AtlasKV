@@ -10,16 +10,16 @@ spring:
 
 # ── HTTP Server ──────────────────────────────────────────────
 server:
-  port: 8080
+  port: ${REST_PORT:8081}
   shutdown: graceful
 
 # ── AtlasKV Node Configuration ──────────────────────────────
 atlaskv:
   node:
-    id: node1
+    id: ${NODE_ID:node1}
 
   raft:
-    data-dir: ./data
+    data-dir: ${DATA_DIRECTORY:./data}
     # Named peer addresses: peerId -> host:port
     peer-addresses: {}
     # Simple peer list (auto-generates peer IDs)
@@ -32,7 +32,7 @@ atlaskv:
 
   server:
     host: 0.0.0.0
-    grpc-port: 50051
+    grpc-port: ${GRPC_PORT:50051}
 
 # ── OpenAPI / Swagger ────────────────────────────────────────
 springdoc:
@@ -56,8 +56,7 @@ management:
 # ── Logging ──────────────────────────────────────────────────
 logging:
   level:
-    com.atlaskv: INFO
+    com.atlaskv: ${LOG_LEVEL:INFO}
     io.grpc: WARN
-    org.springframework: DEBUG
-    org.springframework.beans: TRACE
-    org.springframework.beans.factory.support: TRACE
+    org.springframework: INFO
+

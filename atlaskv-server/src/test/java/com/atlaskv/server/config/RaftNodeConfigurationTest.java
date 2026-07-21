@@ -55,4 +55,50 @@ class RaftNodeConfigurationTest {
                 .isInstanceOf(ConfigValidationException.class)
                 .hasMessageContaining("must be strictly less than minElectionTimeoutMs");
     }
+
+    @Test
+    @DisplayName("Parses peer nodes from environment variable format id:host:port")
+    void parsesPeerNodesColonFormat() {
+        ClusterConfig.Builder builder = ClusterConfig.builder()
+                .nodeId("node1")
+                .listenAddress("127.0.0.1", 50051)
+                .storageDirectory("dir1")
+                .snapshotDirectory("dir2");
+
+        configuration.parseAndAddPeers("node2:127.0.0.1:50052,node3:127.0.0.1:50053", "node1", builder);
+        ClusterConfig config = builder.build();
+
+        assertThat(config.peerIds()).extracting("value").containsExactlyInAnyOrder("node2", "node3");
+        assertThat(config.peerAddresses().get(com.atlaskv.core.NodeId.of("node2")).getPort()).isEqualTo(50052);
+    }
+
+    @Test
+    @DisplayName("Parses peer nodes from environment variable format id=host:port")
+    void parsesPeerNodesEqualsFormat() {
+        ClusterConfig.Builder builder = ClusterConfig.builder()
+                .nodeId("node1")
+                .listenAddress("127.0.0.1", 50051)
+                .storageDirectory("dir1")
+                .snapshotDirectory("dir2");
+
+        configuration.parseAndAddPeers("node2=127.0.0.1:50052;node3=127.0.0.1:50053", "node1", builder);
+        ClusterConfig config = builder.build();
+
+        assertThat(config.peerIds()).extracting("value").containsExactlyInAnyOrder("node2", "node3");
+    }
+
+    @Test
+    @DisplayName("Filters out own node ID when parsing peer nodes")
+    void filtersOutOwnNodeId() {
+        ClusterConfig.Builder builder = ClusterConfig.builder()
+                .nodeId("node1")
+                .listenAddress("127.0.0.1", 50051)
+                .storageDirectory("dir1")
+                .snapshotDirectory("dir2");
+
+        configuration.parseAndAddPeers("node1:127.0.0.1:50051,node2:127.0.0.1:50052", "node1", builder);
+        ClusterConfig config = builder.build();
+
+        assertThat(config.peerIds()).extracting("value").containsExactly("node2");
+    }
 }

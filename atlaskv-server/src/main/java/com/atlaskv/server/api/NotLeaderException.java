@@ -48,4 +48,36 @@ public final class NotLeaderException extends RuntimeException {
     public String getLeaderAddress() {
         return leaderAddress;
     }
+
+    /**
+     * Maps gRPC socket addresses to the corresponding HTTP REST addresses for client redirection.
+     *
+     * @param leaderNodeId current leader NodeId
+     * @param leaderSocketAddr gRPC peer socket address of the leader
+     * @return HTTP REST leader address string (host:port)
+     */
+    public static String resolveLeaderAddress(
+            com.atlaskv.core.NodeId leaderNodeId,
+            java.net.InetSocketAddress leaderSocketAddr) {
+        if (leaderSocketAddr == null) {
+            return null;
+        }
+        String host = leaderSocketAddr.getHostString();
+        int grpcPort = leaderSocketAddr.getPort();
+
+        // 1. Check if running inside docker (hosts: node1, node2, node3)
+        if (host.matches("node\\d+")) {
+            return host + ":8080";
+        }
+
+        // 2. Local execution mapping (50051 -> 8081, 50052 -> 8082, 50053 -> 8083)
+        if (grpcPort >= 50050 && grpcPort <= 50060) {
+            int nodeNum = grpcPort - 50050;
+            return host + ":" + (8080 + nodeNum);
+        }
+
+        // Default fallback
+        return host + ":" + grpcPort;
+    }
 }
+

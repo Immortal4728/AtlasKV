@@ -1,0 +1,36 @@
+# Test configuration for Spring Boot integration tests in SDK module
+spring:
+  application:
+    name: atlaskv-server-test
+  main:
+    banner-mode: off
+
+atlaskv:
+  node:
+    id: test-node
+
+  raft:
+    data-dir: ${java.io.tmpdir}/atlaskv-sdk-test-${random.uuid}
+    peer-addresses: {}
+    peers: []
+    min-election-timeout-ms: 200
+    max-election-timeout-ms: 400
+    heartbeat-interval-ms: 50
+    snapshot-threshold: 100
+    rpc-timeout-ms: 1000
+
+  server:
+    host: localhost
+    grpc-port: 0
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    com.atlaskv: DEBUG
+    io.grpc: WARN
+    org.springframework: DEBUG

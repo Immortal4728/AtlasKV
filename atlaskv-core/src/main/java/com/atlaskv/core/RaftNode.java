@@ -108,6 +108,10 @@ public final class RaftNode implements RaftEventHandler, AutoCloseable {
     @Override
     public void handleEvent(RaftEvent event) {
         Objects.requireNonNull(event, "Event must not be null");
+        if (!eventLoop.isEventLoopThread()) {
+            eventLoop.submit(event);
+            return;
+        }
         switch (event) {
             case RaftEvent.ElectionTimeoutEvent ignored -> RaftNodeEngine.onElectionTimeout(this);
             case RaftEvent.HeartbeatTimeoutEvent ignored -> RaftNodeEngine.onHeartbeatTimeout(this);

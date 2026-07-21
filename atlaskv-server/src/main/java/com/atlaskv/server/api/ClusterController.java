@@ -12,7 +12,9 @@ import com.atlaskv.server.api.dto.MetricsResponse;
 import com.atlaskv.server.config.ClusterConfig;
 import com.atlaskv.server.health.NodeHealthStatus;
 import com.atlaskv.server.lifecycle.NodeLifecycleManager;
+import com.atlaskv.server.metrics.HistoryMetrics;
 import com.atlaskv.server.metrics.MembershipMetrics;
+import com.atlaskv.server.metrics.PrefixMetrics;
 import com.atlaskv.server.metrics.ReadMetrics;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
 
@@ -48,11 +50,16 @@ public class ClusterController {
     private final KeyValueStateMachine stateMachine;
     private final ReadMetrics readMetrics;
     private final MembershipMetrics membershipMetrics;
+    private final com.atlaskv.server.metrics.CasMetrics casMetrics;
+    private final PrefixMetrics prefixMetrics;
+    private final HistoryMetrics historyMetrics;
 
     public ClusterController(NodeLifecycleManager lifecycleManager,
                              ClusterConfig clusterConfig,
                              KeyValueStateMachine stateMachine) {
-        this(lifecycleManager, clusterConfig, stateMachine, new ReadMetrics(), new MembershipMetrics());
+        this(lifecycleManager, clusterConfig, stateMachine, new ReadMetrics(),
+                new MembershipMetrics(), new com.atlaskv.server.metrics.CasMetrics(),
+                new PrefixMetrics(), new HistoryMetrics());
     }
 
     @Autowired
@@ -60,12 +67,18 @@ public class ClusterController {
                              ClusterConfig clusterConfig,
                              KeyValueStateMachine stateMachine,
                              ReadMetrics readMetrics,
-                             MembershipMetrics membershipMetrics) {
+                             MembershipMetrics membershipMetrics,
+                             com.atlaskv.server.metrics.CasMetrics casMetrics,
+                             PrefixMetrics prefixMetrics,
+                             HistoryMetrics historyMetrics) {
         this.lifecycleManager = lifecycleManager;
         this.clusterConfig = clusterConfig;
         this.stateMachine = stateMachine;
         this.readMetrics = readMetrics;
         this.membershipMetrics = membershipMetrics;
+        this.casMetrics = casMetrics;
+        this.prefixMetrics = prefixMetrics;
+        this.historyMetrics = historyMetrics;
     }
 
     @GetMapping("/status")
@@ -216,6 +229,15 @@ public class ClusterController {
             logLength = health.commitIndex();
         }
 
+        double averageHistorySize = 0.0;
+        if (!stateMachine.history().isEmpty()) {
+            long totalHistoryRevisions = 0;
+            for (var entry : stateMachine.history().values()) {
+                totalHistoryRevisions += entry.size();
+            }
+            averageHistorySize = (double) totalHistoryRevisions / stateMachine.history().size();
+        }
+
         MetricsResponse response = new MetricsResponse(
                 health.nodeId().value(),
                 health.currentTerm(),
@@ -230,7 +252,18 @@ public class ClusterController {
                 readMetrics.successfulReadRequests(),
                 readMetrics.averageReadLatencyMs(),
                 membershipMetrics.totalMembershipChanges(),
-                membershipMetrics.averageMembershipChangeLatencyMs());
+                membershipMetrics.averageMembershipChangeLatencyMs(),
+                casMetrics.totalAttempts(),
+                casMetrics.successes(),
+                casMetrics.failures(),
+                casMetrics.averageLatencyMs(),
+                prefixMetrics.queryCount(),
+                prefixMetrics.averageLatencyMs(),
+                prefixMetrics.averageResultSize(),
+                historyMetrics.historyReads(),
+                historyMetrics.historyWrites(),
+                historyMetrics.rollbackCount(),
+                averageHistorySize);
 
         return ResponseEntity.ok(response);
     }
