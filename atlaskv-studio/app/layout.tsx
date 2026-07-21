@@ -4,6 +4,7 @@ import './globals.css';
 
 import { QueryProvider } from '@/components/providers/query-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -16,9 +17,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'AtlasKV — Replicated Key-Value Store',
+  title: 'AtlasKV — Replicated Key-Value Studio',
   description:
-    'A production-inspired fault-tolerant distributed key-value store built on Raft consensus and gRPC.',
+    'Enterprise distributed key-value database management console for AtlasKV Raft consensus clusters.',
 };
 
 export default function RootLayout({
@@ -35,6 +36,7 @@ export default function RootLayout({
         <QueryProvider>
           <TooltipProvider>
             {children}
+            <Toaster position="top-right" theme="dark" richColors closeButton />
           </TooltipProvider>
         </QueryProvider>
       </body>

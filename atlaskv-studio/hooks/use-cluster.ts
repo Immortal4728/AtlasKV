@@ -1,16 +1,16 @@
-// ─── React Query Hooks for AtlasKV ───────────────────────────────────────────
-
+// ─── TanStack Query Hooks for AtlasKV Cluster ─────────────────────────────────
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import * as api from '@/services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { ClusterApi, MetricsApi, HealthApi } from '@/services/api';
+import type { AddMemberRequest } from '@/types/api';
 
 const DEFAULT_REFETCH_INTERVAL = 3000;
 
 export function useClusterStatus() {
   return useQuery({
     queryKey: ['cluster', 'status'],
-    queryFn: api.getClusterStatus,
+    queryFn: () => ClusterApi.getStatus(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL,
     retry: 1,
   });
@@ -19,7 +19,7 @@ export function useClusterStatus() {
 export function useLeader() {
   return useQuery({
     queryKey: ['cluster', 'leader'],
-    queryFn: api.getLeader,
+    queryFn: () => ClusterApi.getLeader(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL,
     retry: 1,
   });
@@ -28,7 +28,7 @@ export function useLeader() {
 export function useMetrics() {
   return useQuery({
     queryKey: ['cluster', 'metrics'],
-    queryFn: api.getMetrics,
+    queryFn: () => MetricsApi.getMetrics(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL,
     retry: 1,
   });
@@ -37,7 +37,7 @@ export function useMetrics() {
 export function useMembers() {
   return useQuery({
     queryKey: ['cluster', 'members'],
-    queryFn: api.getMembers,
+    queryFn: () => ClusterApi.getMembers(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL,
     retry: 1,
   });
@@ -46,8 +46,30 @@ export function useMembers() {
 export function useHealth() {
   return useQuery({
     queryKey: ['health'],
-    queryFn: api.getHealth,
+    queryFn: () => HealthApi.getHealth(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL * 2,
     retry: 1,
+  });
+}
+
+export function useAddMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (req: AddMemberRequest) => ClusterApi.addMember(req),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'status'] });
+    },
+  });
+}
+
+export function useRemoveMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (nodeId: string) => ClusterApi.removeMember(nodeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'members'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'status'] });
+    },
   });
 }

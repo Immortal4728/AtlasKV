@@ -10,16 +10,16 @@ spring:
 
 # ── HTTP Server ──────────────────────────────────────────────
 server:
-  port: ${REST_PORT:8081}
+  port: ${SERVER_PORT:${REST_PORT:8081}}
   shutdown: graceful
 
 # ── AtlasKV Node Configuration ──────────────────────────────
 atlaskv:
   node:
-    id: ${NODE_ID:node1}
+    id: ${RAFT_NODE_ID:${NODE_ID:node1}}
 
   raft:
-    data-dir: ${DATA_DIRECTORY:./data}
+    data-dir: ${RAFT_DATA_DIR:${DATA_DIRECTORY:./data}}
     # Named peer addresses: peerId -> host:port
     peer-addresses: {}
     # Simple peer list (auto-generates peer IDs)
@@ -59,4 +59,3 @@ logging:
     com.atlaskv: ${LOG_LEVEL:INFO}
     io.grpc: WARN
     org.springframework: INFO
-

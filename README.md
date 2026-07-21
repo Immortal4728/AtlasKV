@@ -1,133 +1,158 @@
-<div align="center">
+# AtlasKV — Distributed Key-Value Database v1.0
 
-# AtlasKV
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/Immortal4728/AtlasKV)
+[![Raft Consensus](https://img.shields.io/badge/consensus-Raft-blue.svg)](https://raft.github.io/)
+[![Java SDK](https://img.shields.io/badge/SDK-Java%2021-orange.svg)](./atlaskv-java-sdk)
+[![TypeScript SDK](https://img.shields.io/badge/SDK-TypeScript-3178c6.svg)](./atlaskv-ts-sdk)
+[![AtlasKV Studio](https://img.shields.io/badge/Studio-Next.js%2016-black.svg)](./atlaskv-studio)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-**A fault-tolerant distributed key-value store built on the Raft consensus algorithm.**
-
-[![CI](https://github.com/rishikesh-suvarna/atlaskv/actions/workflows/ci.yml/badge.svg)](https://github.com/rishikesh-suvarna/atlaskv/actions/workflows/ci.yml)
-[![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-
-</div>
+**AtlasKV** is a high-performance, fault-tolerant distributed key-value store built on the **Raft consensus algorithm**. Designed for microservice coordination, leader election, configuration management, and low-latency storage, AtlasKV provides strong consistency, linearizable reads, atomic Compare-And-Swap (CAS) transactions, distributed TTL leases, and real-time event streaming.
 
 ---
 
-## Overview
+## 🚀 Key Features
 
-AtlasKV is a production-inspired distributed key-value store that implements the [Raft consensus algorithm](https://raft.github.io/raft.pdf) from scratch in pure Java. It demonstrates fault-tolerant replicated state machine architecture with a clean separation between the consensus engine and application shell.
+- **Strong Consistency & Raft Consensus**: Complete implementation of Raft consensus including Leader Election, Log Replication, Heartbeats, and Joint Consensus cluster membership changes.
+- **High-Performance Storage Engine**: Persistent Write-Ahead Logging (WAL) and memory-mapped state machine.
+- **Atomic Concurrency (CAS)**: Strict Compare-And-Swap transactions (`expectedVersion`) preventing race conditions under high concurrency.
+- **Distributed TTL Leases**: Auto-expiring lease management with keep-alive renewals and automatic key cleanup.
+- **Real-Time Event Streaming (SSE Watch API)**: Subscribe to key updates and prefix changes via Server-Sent Events.
+- **Multi-Node Joint Consensus**: Dynamically add or remove cluster nodes without downtime.
+- **Full Client Ecosystem**: Official **Java SDK**, **TypeScript SDK**, **CLI**, and **AtlasKV Studio** web management console.
 
-### Key Design Decisions
+---
 
-- **Pure Java Raft Engine** — Zero framework dependencies in the consensus core. Testable, portable, and clean.
-- **Spring Boot Application Shell** — Thin wrapper providing REST API, configuration, and health checks. Mirrors how CockroachDB wraps etcd/raft.
-- **Deterministic Testing** — Simulated clock, simulated network, and in-memory storage enable reproducible fault-injection tests.
-- **Single-Threaded Event Loop** — All Raft state mutations happen on one thread. No locks in the critical path.
-
-## Architecture
-
-```
-┌──────────────────────────────────────────────────────────┐
-│                     AtlasKV Node                          │
-│                                                          │
-│  ┌────────────────────────────────────────────────────┐  │
-│  │  Layer 4: Application Shell (Spring Boot)          │  │
-│  │  REST API · Health Checks · Configuration          │  │
-│  └──────────────────────┬─────────────────────────────┘  │
-│                         │                                │
-│  ┌──────────────────────▼─────────────────────────────┐  │
-│  │  Layer 3: Raft Engine (Pure Java)                  │  │
-│  │  RaftNode · Election · Replication · Event Loop    │  │
-│  └───────┬──────────────────────────────┬─────────────┘  │
-│          │                              │                │
-│  ┌───────▼──────────┐  ┌───────────────▼──────────────┐  │
-│  │ Layer 2:         │  │ Layer 1:                     │  │
-│  │ Transport (gRPC) │  │ Storage (WAL + Metadata)     │  │
-│  └──────────────────┘  └──────────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
-```
-
-## Project Structure
+## 🏛️ System Architecture
 
 ```
-atlaskv-parent/
-├── atlaskv-core        # Pure Java Raft engine (ZERO external deps)
-├── atlaskv-storage     # WAL-based persistence (implements core interfaces)
-├── atlaskv-transport   # gRPC network layer (implements core interfaces)
-├── atlaskv-server      # Spring Boot application shell
-├── atlaskv-client      # CLI client (Picocli)
-└── atlaskv-test        # Deterministic test infrastructure
+                       ┌─────────────────────────┐
+                       │     AtlasKV Studio      │
+                       │   (Next.js 16 Console)  │
+                       └────────────┬────────────┘
+                                    │ HTTP / REST / SSE
+                                    ▼
+    ┌──────────────────────────────────────────────────────────────┐
+    │                       AtlasKV Cluster                        │
+    │                                                              │
+    │   ┌──────────────────┐  gRPC   ┌──────────────────┐          │
+    │   │  Node 1 (LEADER) │ ◄─────► │ Node 2 (FOLLOWER)│          │
+    │   └────────┬─────────┘         └────────┬─────────┘          │
+    │            │                            │                    │
+    │            │           gRPC             │                    │
+    │            └────────────────────────────┘                    │
+    └──────────────────────────────────────────────────────────────┘
 ```
 
-## Prerequisites
+---
 
-- **Java 21** (LTS) — [Download](https://adoptium.net/)
-- **Maven 3.9+** — Included via Maven Wrapper
+## ⚡ Quick Start with Docker Compose
 
-## Quick Start
+Spin up a full 3-node Raft consensus cluster and AtlasKV Studio with a single command:
 
 ```bash
-# Build the entire project
-./mvnw clean verify
-
-# Run tests
-./mvnw test
-
-# Run Checkstyle
-./mvnw checkstyle:check
-
-# Run SpotBugs
-./mvnw spotbugs:check
+docker-compose up --build -d
 ```
 
-## Module Dependency Graph
+### Services Started:
+- **Node 1 (Leader)**: REST `http://localhost:8081` | gRPC `50051`
+- **Node 2 (Follower)**: REST `http://localhost:8082` | gRPC `50052`
+- **Node 3 (Follower)**: REST `http://localhost:8083` | gRPC `50053`
+- **AtlasKV Studio**: Web Management Console `http://localhost:3000`
 
+---
+
+## 💻 AtlasKV Studio Web Console
+
+AtlasKV Studio provides a management console for cluster monitoring and data exploration.
+
+- **Cluster Topology**: Live node roles, heartbeat monitoring, term counters, and gRPC ports.
+- **Key Explorer**: Browse, search, filter, create, update (with atomic CAS support), and delete keys.
+- **Prefix Queries**: Execute range scans with pagination support.
+- **Watch Terminal**: Live stream of database changes via SSE.
+- **Metrics & Telemetry**: Real-time charts for read/write latencies, throughput, and WAL log length.
+
+---
+
+## 🛠️ Client SDKs & Tooling
+
+### 1. Java SDK (`atlaskv-java-sdk`)
+
+```java
+import com.atlaskv.sdk.AtlasKVClient;
+import com.atlaskv.sdk.model.*;
+
+AtlasKVClient client = AtlasKVClient.builder()
+    .baseUri("http://localhost:8081")
+    .autoRedirect(true)
+    .build();
+
+// Put & Get
+client.put("app/theme", "dark");
+KeyValueResponse kv = client.get("app/theme");
+System.out.println("Value: " + kv.value() + " (v" + kv.version() + ")");
+
+// Atomic Compare-And-Swap (CAS)
+client.casPut("app/theme", "light", kv.version());
+
+// Distributed Lease
+LeaseResponse lease = client.createLease("30s");
+client.put("session/user_1", "active", "30s", lease.leaseId());
 ```
-atlaskv-core          ← No dependencies (pure Java)
-     ↑
-     ├── atlaskv-storage
-     ├── atlaskv-transport
-     ├── atlaskv-test
-     └── atlaskv-server ← Also depends on storage + transport
-         
-atlaskv-client        ← Server API only (Phase 4)
+
+### 2. TypeScript SDK (`atlaskv-ts-sdk`)
+
+```typescript
+import { AtlasKVClient } from 'atlaskv-sdk';
+
+const client = new AtlasKVClient({
+  baseUrl: 'http://localhost:8081',
+  autoRedirect: true,
+});
+
+// Put & Get
+await client.kv.put('config/max_connections', '100');
+const entry = await client.kv.get('config/max_connections');
+
+// Watch API Stream
+const session = client.watch.watchKey('config/max_connections', (event) => {
+  console.log('Key modified:', event.key, event.value);
+});
 ```
 
-## Development Roadmap & Feature Summary
+### 3. AtlasKV CLI (`atlaskv-cli`)
 
-| Sprint / Feature | Milestone | Status |
-|------------------|-----------|--------|
-| **Sprint 1** | Clock abstraction & Event Loop Foundation | ✅ Complete |
-| **Sprint 2** | Raft RPCs & Data Model | ✅ Complete |
-| **Sprint 3** | Core Raft Node & Leader Election | ✅ Complete |
-| **Sprint 4** | Log Replication & State Machine | ✅ Complete |
-| **Sprint 5** | Storage Layer (WAL & Persistent State) | ✅ Complete |
-| **Sprint 6** | Network Transport (gRPC Layer) | ✅ Complete |
-| **Sprint 7** | Spring Boot Application Shell & REST API | ✅ Complete |
-| **Sprint 8** | Snapshotting & Compaction (`InstallSnapshot`) | ✅ Complete |
-| **Sprint 9** | Linearizable Reads (`ReadIndex`) & Observability | ✅ Complete |
-| **Sprint 10** | Dynamic Cluster Membership (Joint Consensus) | ✅ Complete |
+```bash
+# Set key
+atlaskv-cli put app/config/mode production
 
-## Documentation
+# Get key
+atlaskv-cli get app/config/mode
 
-- [Architecture](docs/architecture/) — System design documentation
-- [ADRs](docs/adr/) — Architecture Decision Records
-- [Contributing](CONTRIBUTING.md) — Development setup and guidelines
-- [Code of Conduct](CODE_OF_CONDUCT.md) — Community standards
+# Prefix query
+atlaskv-cli prefix app/
 
-## Tech Stack
+# Create lease
+atlaskv-cli lease create 60s
+```
 
-| Component | Technology |
-|-----------|-----------|
-| Language | Java 21 LTS |
-| Build | Maven (multi-module) |
-| Consensus | Raft (custom implementation) |
-| Application Shell | Spring Boot 3.x |
-| Inter-node RPC | gRPC (Phase 4) |
-| Persistence | Custom WAL |
-| Testing | JUnit 5 + AssertJ + Deterministic Simulation |
-| Code Quality | Checkstyle + SpotBugs |
-| CI/CD | GitHub Actions |
+---
 
-## License
+## 📊 REST API Reference
 
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+| Endpoint | Method | Description |
+|---|---|---|
+| `/api/v1/cluster/status` | `GET` | Cluster status, term, leader ID, and indices |
+| `/api/v1/cluster/members` | `GET / POST / DELETE` | Joint consensus member management |
+| `/api/v1/kv/{key}` | `GET / POST / DELETE` | Key CRUD and linearizable reads |
+| `/api/v1/kv/{key}?expectedVersion={v}` | `PUT` | Atomic Compare-And-Swap (CAS) update |
+| `/api/v1/kv/prefix/{prefix}` | `GET` | Range query prefix scan |
+| `/api/v1/lease` | `GET / POST` | Create and list distributed leases |
+| `/api/v1/watch/{key}` | `GET (SSE)` | Real-time Server-Sent Events stream |
+| `/api/v1/cluster/metrics` | `GET` | Actuator telemetry and latency metrics |
+
+---
+
+## 📜 License
+
+AtlasKV is licensed under the [MIT License](./LICENSE).

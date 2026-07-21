@@ -1,138 +1,228 @@
-// ─── AtlasKV API Client ──────────────────────────────────────────────────────
-// Centralized HTTP client for the AtlasKV backend REST API.
-
+// ─── AtlasKV Centralized Axios API Client ─────────────────────────────────────
+import axios, { AxiosInstance, AxiosError } from 'axios';
 import type {
   ClusterStatusResponse,
   LeaderResponse,
   MetricsResponse,
   ClusterMembersResponse,
   KeyValueResponse,
+  PrefixQueryResponse,
+  LeaseResponse,
+  LeaseRequest,
+  CasConflictResponse,
+  RevisionResponse,
   AddMemberRequest,
   HealthResponse,
-} from '@/types';
+} from '@/types/api';
 
 const DEFAULT_BASE_URL = '';
 const DEFAULT_TIMEOUT = 5000;
 
-function getBaseUrl(): string {
+export function getSavedBaseUrl(): string {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem('atlaskv-server-url');
-    // Empty string means use relative URLs (through Next.js rewrites proxy)
-    return saved ?? DEFAULT_BASE_URL;
+    return localStorage.getItem('atlaskv-server-url') ?? DEFAULT_BASE_URL;
   }
   return DEFAULT_BASE_URL;
 }
 
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     public status: number,
     public statusText: string,
-    message: string
+    message: string,
+    public details?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
 
-async function request<T>(
-  path: string,
-  options: RequestInit = {}
-): Promise<T> {
-  const baseUrl = getBaseUrl();
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT);
-
-  try {
-    const response = await fetch(`${baseUrl}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-    });
-
-    if (!response.ok) {
-      const text = await response.text().catch(() => response.statusText);
-      throw new ApiError(response.status, response.statusText, text);
-    }
-
-    return await response.json() as T;
-  } finally {
-    clearTimeout(timeout);
+export class ConflictError extends ApiError {
+  constructor(
+    public expectedVersion: number,
+    public currentVersion: number,
+    message: string
+  ) {
+    super(409, 'Conflict', message);
+    this.name = 'ConflictError';
   }
 }
 
-// ─── Cluster APIs ────────────────────────────────────────────────────────────
+// Axios instance with request/response interceptors
+const httpClient: AxiosInstance = axios.create({
+  timeout: DEFAULT_TIMEOUT,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
 
-export async function getClusterStatus(): Promise<ClusterStatusResponse> {
-  return request<ClusterStatusResponse>('/api/v1/cluster/status');
-}
+httpClient.interceptors.request.use((config) => {
+  const baseUrl = getSavedBaseUrl();
+  if (baseUrl && !config.url?.startsWith('http')) {
+    config.baseURL = baseUrl;
+  }
+  return config;
+});
 
-export async function getLeader(): Promise<LeaderResponse> {
-  return request<LeaderResponse>('/api/v1/cluster/leader');
-}
+httpClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response) {
+      const status = error.response.status;
+      const data = error.response.data as any;
 
-export async function getMetrics(): Promise<MetricsResponse> {
-  return request<MetricsResponse>('/api/v1/cluster/metrics');
-}
+      if (status === 409 && data?.expectedVersion !== undefined) {
+        throw new ConflictError(
+          data.expectedVersion,
+          data.currentVersion,
+          data.message || 'Version mismatch'
+        );
+      }
 
-export async function getMembers(): Promise<ClusterMembersResponse> {
-  return request<ClusterMembersResponse>('/api/v1/cluster/members');
-}
+      throw new ApiError(
+        status,
+        error.response.statusText,
+        typeof data === 'string' ? data : data?.message || error.message,
+        data
+      );
+    } else if (error.request) {
+      throw new ApiError(0, 'Network Error', 'Network error or cluster unreachable');
+    }
+    throw error;
+  }
+);
 
-export async function addMember(req: AddMemberRequest): Promise<ClusterMembersResponse> {
-  return request<ClusterMembersResponse>('/api/v1/cluster/members', {
-    method: 'POST',
-    body: JSON.stringify(req),
-  });
-}
+// ─── Cluster API ─────────────────────────────────────────────────────────────
+export const ClusterApi = {
+  async getStatus(): Promise<ClusterStatusResponse> {
+    const res = await httpClient.get<ClusterStatusResponse>('/api/v1/cluster/status');
+    return res.data;
+  },
 
-export async function removeMember(nodeId: string): Promise<ClusterMembersResponse> {
-  return request<ClusterMembersResponse>(`/api/v1/cluster/members/${nodeId}`, {
-    method: 'DELETE',
-  });
-}
+  async getLeader(): Promise<LeaderResponse> {
+    const res = await httpClient.get<LeaderResponse>('/api/v1/cluster/leader');
+    return res.data;
+  },
 
-// ─── Key-Value APIs ──────────────────────────────────────────────────────────
+  async getMembers(): Promise<ClusterMembersResponse> {
+    const res = await httpClient.get<ClusterMembersResponse>('/api/v1/cluster/members');
+    return res.data;
+  },
 
-export async function getValue(
-  key: string,
-  linearizable = true
-): Promise<KeyValueResponse> {
-  return request<KeyValueResponse>(
-    `/api/v1/kv/${encodeURIComponent(key)}?linearizable=${linearizable}`
-  );
-}
+  async addMember(req: AddMemberRequest): Promise<ClusterMembersResponse> {
+    const res = await httpClient.post<ClusterMembersResponse>('/api/v1/cluster/members', req);
+    return res.data;
+  },
 
-export async function putValue(
-  key: string,
-  value: string
-): Promise<KeyValueResponse> {
-  return request<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`, {
-    method: 'POST',
-    body: JSON.stringify({ value }),
-  });
-}
+  async removeMember(nodeId: string): Promise<ClusterMembersResponse> {
+    const res = await httpClient.delete<ClusterMembersResponse>(`/api/v1/cluster/members/${nodeId}`);
+    return res.data;
+  },
+};
 
-export async function deleteValue(key: string): Promise<KeyValueResponse> {
-  return request<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`, {
-    method: 'DELETE',
-  });
-}
+// ─── Key-Value API ───────────────────────────────────────────────────────────
+export const KeyValueApi = {
+  async get(key: string, linearizable = true): Promise<KeyValueResponse> {
+    const res = await httpClient.get<KeyValueResponse>(
+      `/api/v1/kv/${encodeURIComponent(key)}?linearizable=${linearizable}`
+    );
+    return res.data;
+  },
 
-// ─── Health / Actuator APIs ──────────────────────────────────────────────────
+  async put(key: string, value: string, ttl?: string, leaseId?: string): Promise<KeyValueResponse> {
+    const res = await httpClient.post<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`, {
+      value,
+      ttl: ttl || null,
+      leaseId: leaseId || null,
+    });
+    return res.data;
+  },
 
-export async function getHealth(): Promise<HealthResponse> {
-  return request<HealthResponse>('/actuator/health');
-}
+  async casPut(key: string, value: string, expectedVersion: number): Promise<KeyValueResponse> {
+    const res = await httpClient.put<KeyValueResponse>(
+      `/api/v1/kv/${encodeURIComponent(key)}?expectedVersion=${expectedVersion}`,
+      { value }
+    );
+    return res.data;
+  },
 
-// ─── Admin APIs ──────────────────────────────────────────────────────────────
+  async delete(key: string): Promise<KeyValueResponse> {
+    const res = await httpClient.delete<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`);
+    return res.data;
+  },
+};
 
-export async function triggerSnapshot(): Promise<{ message: string }> {
-  return request<{ message: string }>('/api/v1/admin/snapshot', {
-    method: 'POST',
-  });
-}
+// ─── Prefix API ──────────────────────────────────────────────────────────────
+export const PrefixApi = {
+  async query(prefix: string, offset = 0, limit = 100): Promise<PrefixQueryResponse> {
+    const res = await httpClient.get<PrefixQueryResponse>(
+      `/api/v1/kv/prefix/${encodeURIComponent(prefix)}?offset=${offset}&limit=${limit}`
+    );
+    return res.data;
+  },
+};
 
-export { ApiError };
+// ─── Lease API ───────────────────────────────────────────────────────────────
+export const LeaseApi = {
+  async create(ttl: string, leaseId?: string): Promise<LeaseResponse> {
+    const res = await httpClient.post<LeaseResponse>('/api/v1/lease', { ttl, leaseId });
+    return res.data;
+  },
+
+  async renew(leaseId: string): Promise<LeaseResponse> {
+    const res = await httpClient.post<LeaseResponse>(`/api/v1/lease/${leaseId}/renew`);
+    return res.data;
+  },
+
+  async revoke(leaseId: string): Promise<void> {
+    await httpClient.delete(`/api/v1/lease/${leaseId}`);
+  },
+
+  async list(): Promise<LeaseResponse[]> {
+    const res = await httpClient.get<LeaseResponse[]>('/api/v1/lease');
+    return res.data;
+  },
+};
+
+// ─── Metrics API ─────────────────────────────────────────────────────────────
+export const MetricsApi = {
+  async getMetrics(): Promise<MetricsResponse> {
+    const res = await httpClient.get<MetricsResponse>('/api/v1/cluster/metrics');
+    return res.data;
+  },
+};
+
+// ─── History API ─────────────────────────────────────────────────────────────
+export const HistoryApi = {
+  async getHistory(key: string): Promise<RevisionResponse> {
+    const res = await httpClient.get<RevisionResponse>(`/api/v1/kv/${encodeURIComponent(key)}/history`);
+    return res.data;
+  },
+
+  async rollback(key: string, revision: number): Promise<KeyValueResponse> {
+    const res = await httpClient.post<KeyValueResponse>(
+      `/api/v1/kv/${encodeURIComponent(key)}/rollback/${revision}`
+    );
+    return res.data;
+  },
+};
+
+// ─── Health API ──────────────────────────────────────────────────────────────
+export const HealthApi = {
+  async getHealth(): Promise<HealthResponse> {
+    const res = await httpClient.get<HealthResponse>('/actuator/health');
+    return res.data;
+  },
+};
+
+// Top-level export aliases for backward compatibility
+export const getClusterStatus = ClusterApi.getStatus;
+export const getLeader = ClusterApi.getLeader;
+export const getMetrics = MetricsApi.getMetrics;
+export const getMembers = ClusterApi.getMembers;
+export const addMember = ClusterApi.addMember;
+export const removeMember = ClusterApi.removeMember;
+export const getValue = KeyValueApi.get;
+export const putValue = KeyValueApi.put;
+export const deleteValue = KeyValueApi.delete;
+export const getHealth = HealthApi.getHealth;

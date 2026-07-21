@@ -1,87 +1,114 @@
-# ====================================================
-# AtlasKV 3-Node Cluster — Docker Compose
-# ====================================================
-
 version: '3.8'
 
 services:
-  node1:
+  # ── Raft Node 1 (Leader / Initial Bootstrap) ────────────────────────────────
+  atlaskv-node1:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: atlaskv-node1
-    ports:
-      - "8081:8080"
-      - "50051:50051"
     environment:
-      - NODE_ID=node1
-      - REST_PORT=8080
+      - SERVER_PORT=8081
       - GRPC_PORT=50051
-      - DATA_DIRECTORY=/app/data
-      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - RAFT_NODE_ID=node1
+      - RAFT_DATA_DIR=/app/data
+      - CLUSTER_MEMBERS=node1:atlaskv-node1:50051,node2:atlaskv-node2:50052,node3:atlaskv-node3:50053
       - LOG_LEVEL=INFO
+    ports:
+      - "8081:8081"
+      - "50051:50051"
     volumes:
       - node1-data:/app/data
     networks:
       - atlaskv-net
-    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8081/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
-  node2:
+  # ── Raft Node 2 (Follower) ──────────────────────────────────────────────────
+  atlaskv-node2:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: atlaskv-node2
-    ports:
-      - "8082:8080"
-      - "50052:50052"
     environment:
-      - NODE_ID=node2
-      - REST_PORT=8080
+      - SERVER_PORT=8082
       - GRPC_PORT=50052
-      - DATA_DIRECTORY=/app/data
-      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - RAFT_NODE_ID=node2
+      - RAFT_DATA_DIR=/app/data
+      - CLUSTER_MEMBERS=node1:atlaskv-node1:50051,node2:atlaskv-node2:50052,node3:atlaskv-node3:50053
       - LOG_LEVEL=INFO
+    ports:
+      - "8082:8082"
+      - "50052:50052"
     volumes:
       - node2-data:/app/data
     networks:
       - atlaskv-net
     depends_on:
-      - node1
-    restart: unless-stopped
+      atlaskv-node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8082/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
-  node3:
+  # ── Raft Node 3 (Follower) ──────────────────────────────────────────────────
+  atlaskv-node3:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: atlaskv-node3
-    ports:
-      - "8083:8080"
-      - "50053:50053"
     environment:
-      - NODE_ID=node3
-      - REST_PORT=8080
+      - SERVER_PORT=8083
       - GRPC_PORT=50053
-      - DATA_DIRECTORY=/app/data
-      - PEER_NODES=node1:node1:50051,node2:node2:50052,node3:node3:50053
+      - RAFT_NODE_ID=node3
+      - RAFT_DATA_DIR=/app/data
+      - CLUSTER_MEMBERS=node1:atlaskv-node1:50051,node2:atlaskv-node2:50052,node3:atlaskv-node3:50053
       - LOG_LEVEL=INFO
+    ports:
+      - "8083:8083"
+      - "50053:50053"
     volumes:
       - node3-data:/app/data
     networks:
       - atlaskv-net
     depends_on:
-      - node1
-      - node2
-    restart: unless-stopped
+      atlaskv-node1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8083/actuator/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
 
-volumes:
-  node1-data:
-    driver: local
-  node2-data:
-    driver: local
-  node3-data:
-    driver: local
+  # ── AtlasKV Studio (Web Management Console) ──────────────────────────────────
+  atlaskv-studio:
+    build:
+      context: ./atlaskv-studio
+      dockerfile: Dockerfile
+    container_name: atlaskv-studio
+    environment:
+      - PORT=3000
+    ports:
+      - "3000:3000"
+    networks:
+      - atlaskv-net
+    depends_on:
+      atlaskv-node1:
+        condition: service_healthy
 
 networks:
   atlaskv-net:
-    name: atlaskv-net
     driver: bridge
+
+volumes:
+  node1-data:
+  node2-data:
+  node3-data:

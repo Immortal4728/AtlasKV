@@ -73,8 +73,11 @@ public class RaftNodeConfiguration {
             builder.addPeer(entry.getKey(), addr.getHostString(), addr.getPort());
         }
 
-        // Parse PEER_NODES environment variable if present (supports format: id:host:port or id=host:port)
+        // Parse PEER_NODES or CLUSTER_MEMBERS environment variable if present (supports format: id:host:port or id=host:port)
         String peerNodesEnv = System.getenv("PEER_NODES");
+        if (peerNodesEnv == null || peerNodesEnv.isBlank()) {
+            peerNodesEnv = System.getenv("CLUSTER_MEMBERS");
+        }
         parseAndAddPeers(peerNodesEnv, node.getId(), builder);
 
         // Add peers from simple list (auto-generated peer IDs)

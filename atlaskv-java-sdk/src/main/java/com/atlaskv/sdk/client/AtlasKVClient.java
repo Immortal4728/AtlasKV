@@ -145,7 +145,6 @@ public final class AtlasKVClient implements AutoCloseable {
                 int status = response.statusCode();
 
                 if (status >= 200 && status < 300 || status == 404) {
-                    System.out.println("RESPONSE BODY for " + request.uri() + ": " + response.body());
                     return parser.parse(response);
                 }
 

@@ -1,48 +1,57 @@
-# ====================================================
-# AtlasKV Server Dockerfile — Multi-stage Build
-# ====================================================
-
-# ── Stage 1: Build ──────────────────────────────────
-FROM eclipse-temurin:21-jdk-alpine AS builder
+# ── Stage 1: Build Phase ──────────────────────────────────────────────────────
+FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /build
-COPY . .
-RUN sed -i 's/\r$//' mvnw && \
-    chmod +x mvnw && \
-    ./mvnw clean package -pl atlaskv-server -am -DskipTests -q
 
-# ── Stage 2: Runtime ────────────────────────────────
+# Copy root pom and module poms first to cache dependencies
+COPY pom.xml .
+COPY atlaskv-core/pom.xml atlaskv-core/
+COPY atlaskv-transport/pom.xml atlaskv-transport/
+COPY atlaskv-server/pom.xml atlaskv-server/
+COPY atlaskv-java-sdk/pom.xml atlaskv-java-sdk/
+COPY atlaskv-cli/pom.xml atlaskv-cli/
+
+# Fetch dependencies
+RUN mvn dependency:go-offline -B || true
+
+# Copy full source code
+COPY atlaskv-core atlaskv-core
+COPY atlaskv-transport atlaskv-transport
+COPY atlaskv-server atlaskv-server
+COPY atlaskv-java-sdk atlaskv-java-sdk
+COPY atlaskv-cli atlaskv-cli
+
+# Package server jar
+RUN mvn clean package -DskipTests -pl atlaskv-server -am
+
+# ── Stage 2: Runtime Phase ───────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 
-LABEL maintainer="rishikesh-suvarna"
-LABEL description="AtlasKV — Distributed Key-Value Store on Raft Consensus"
+LABEL org.opencontainers.image.title="AtlasKV Distributed Database Engine" \
+      org.opencontainers.image.description="Fault-tolerant distributed key-value store built on Raft consensus" \
+      org.opencontainers.image.version="1.0.0"
 
-# Create a non-root system user and group
-RUN addgroup -S atlaskv && adduser -S atlaskv -G atlaskv
 WORKDIR /app
 
-# Copy the built jar from the builder stage
-COPY --from=builder /build/atlaskv-server/target/atlaskv-server-*.jar app.jar
+# Create non-root user
+RUN addgroup -S atlaskv && adduser -S atlaskv -G atlaskv && \
+    mkdir -p /app/data && chown -R atlaskv:atlaskv /app
 
-# Prepare persistent data directory with proper ownership
-RUN mkdir -p /app/data && chown -R atlaskv:atlaskv /app
-
-# Switch to the non-root user for security
 USER atlaskv
 
-# Expose default REST and gRPC ports
-EXPOSE 8080 50051
+# Copy jar from builder
+COPY --from=builder --chown=atlaskv:atlaskv /build/atlaskv-server/target/atlaskv-server-*.jar /app/atlaskv-server.jar
 
-# Provide default environment variables
-ENV NODE_ID=node1 \
-    REST_PORT=8080 \
+# Environment variable defaults
+ENV SERVER_PORT=8081 \
     GRPC_PORT=50051 \
-    DATA_DIRECTORY=/app/data \
-    LOG_LEVEL=INFO \
-    PEER_NODES=""
+    RAFT_NODE_ID=node1 \
+    RAFT_DATA_DIR=/app/data \
+    LOG_LEVEL=INFO
 
-# Production healthcheck using the REST API status endpoint
-HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost:${REST_PORT}/api/v1/cluster/status || exit 1
+EXPOSE 8081 50051
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+HEALTHCHECK --interval=5s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${SERVER_PORT}/actuator/health || exit 1
+
+ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/atlaskv-server.jar"]
