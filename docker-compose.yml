@@ -96,6 +96,7 @@ services:
     container_name: atlaskv-studio
     environment:
       - PORT=3000
+      - BACKEND_URL=http://atlaskv-node1:8081
     ports:
       - "3000:3000"
     networks:

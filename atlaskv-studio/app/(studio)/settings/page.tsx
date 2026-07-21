@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export default function SettingsPage() {
-  const [endpoint, setEndpoint] = useState('http://localhost:8081');
+  const [endpoint, setEndpoint] = useState('');
   const [timeoutMs, setTimeoutMs] = useState('5000');
   const [refreshIntervalSec, setRefreshIntervalSec] = useState('2');
   const [themeMode, setThemeMode] = useState('dark-modern');
