@@ -10,9 +10,11 @@ export default function StudioLayout({
   return (
     <SidebarProvider>
       <Sidebar />
-      <div className="lg:pl-[220px] min-h-screen flex flex-col">
+      <div className="lg:pl-[240px] min-h-screen flex flex-col">
         <Navbar />
-        <main className="flex-1 px-4 sm:px-6 py-6 overflow-x-hidden">{children}</main>
+        <main className="flex-1 px-4 sm:px-6 py-6 overflow-x-hidden relative">
+          {children}
+        </main>
       </div>
     </SidebarProvider>
   );

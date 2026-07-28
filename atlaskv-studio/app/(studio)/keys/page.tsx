@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -18,6 +18,7 @@ import {
   Star,
   FileJson,
   X,
+  Database,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,9 +31,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PageHeader } from '@/components/ui/page-header';
 import { usePrefix, usePutValue, useCasPutValue, useDeleteValue } from '@/hooks/use-kv';
 import { ConflictError } from '@/services/api';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+const rowVariant = {
+  initial: { opacity: 0, x: -8 },
+  animate: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: 8 },
+};
 
 export default function KeysPage() {
   const [prefixFilter, setPrefixFilter] = useState('');
@@ -174,61 +183,64 @@ export default function KeysPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <KeyRound className="h-5 w-5 text-emerald-400" />
-            Key-Value Explorer
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Browse, create, update, and manage key-value pairs stored in AtlasKV
-          </p>
-        </div>
+      <PageHeader
+        title="Key-Value Explorer"
+        description="Browse, create, update, and manage key-value pairs stored in AtlasKV"
+        icon={KeyRound}
+        iconColor="text-emerald-400"
+        actions={
+          <>
+            <Button
+              onClick={() => {
+                refetch();
+                toast.info('Refreshed key store entries');
+              }}
+              variant="outline"
+              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] hover:text-white text-xs gap-1.5 rounded-lg"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
 
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => {
-              refetch();
-              toast.info('Refreshed key store entries');
-            }}
-            variant="outline"
-            className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs gap-1.5"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-
-          <Button
-            onClick={() => {
-              setInputKey('');
-              setInputValue('');
-              setInputTtl('');
-              setInputLeaseId('');
-              setErrorMsg(null);
-              setCreateDialogOpen(true);
-            }}
-            className="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-semibold text-xs px-3.5 py-2 shadow-lg shadow-emerald-500/20 gap-1.5"
-          >
-            <Plus className="h-4 w-4" />
-            Create Key
-          </Button>
-        </div>
-      </div>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => {
+                  setInputKey('');
+                  setInputValue('');
+                  setInputTtl('');
+                  setInputLeaseId('');
+                  setErrorMsg(null);
+                  setCreateDialogOpen(true);
+                }}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold text-xs px-4 py-2 shadow-lg shadow-emerald-500/20 gap-1.5 rounded-lg border-0"
+              >
+                <Plus className="h-4 w-4" />
+                Create Key
+              </Button>
+            </motion.div>
+          </>
+        }
+      />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-900/60 p-3 rounded-xl border border-white/[0.08] backdrop-blur-md">
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.1 }}
+        className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 glass-card rounded-xl p-3"
+      >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[oklch(1_0_0/25%)]" />
           <Input
             placeholder="Search keys or values..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 pr-8 bg-zinc-950/50 border-white/10 text-xs text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-emerald-500/50"
+            className="pl-9 pr-8 bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs text-[oklch(1_0_0/80%)] placeholder:text-[oklch(1_0_0/25%)] focus-visible:ring-emerald-500/30 rounded-lg"
           />
           {searchTerm && (
             <button
               onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[oklch(1_0_0/30%)] hover:text-[oklch(1_0_0/60%)] transition-colors"
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -236,32 +248,38 @@ export default function KeysPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-zinc-950/50 p-1 rounded-lg border border-white/10 text-xs">
-            <Filter className="h-3.5 w-3.5 text-zinc-400 ml-1.5" />
+          <div className="flex items-center gap-1 bg-[var(--surface-0)] p-1 rounded-lg border border-[oklch(1_0_0/6%)] text-xs">
+            <Filter className="h-3.5 w-3.5 text-[oklch(1_0_0/25%)] ml-1.5" />
             {['', 'app/', 'session/', 'cache/'].map((p) => (
               <button
                 key={p || 'all'}
                 onClick={() => setPrefixFilter(p)}
-                className={`px-2.5 py-1 rounded-md font-medium text-[11px] transition-colors ${
+                className={cn(
+                  'px-2.5 py-1 rounded-md font-medium text-[11px] transition-all duration-200',
                   prefixFilter === p
-                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                    : 'text-zinc-400 hover:text-zinc-200'
-                }`}
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 shadow-sm'
+                    : 'text-[oklch(1_0_0/35%)] hover:text-[oklch(1_0_0/60%)] hover:bg-[oklch(1_0_0/4%)]'
+                )}
               >
                 {p || 'ALL'}
               </button>
             ))}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Table */}
-      <div className="rounded-xl border border-white/[0.08] bg-zinc-900/40 backdrop-blur-md overflow-hidden shadow-xl">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.15 }}
+        className="glass-card rounded-xl overflow-hidden p-0"
+      >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-zinc-950/60 border-b border-white/[0.08] text-zinc-400 uppercase tracking-wider text-[10px] font-mono">
+            <thead className="bg-[var(--surface-0)]/60 border-b border-[oklch(1_0_0/6%)] text-[oklch(1_0_0/28%)] uppercase tracking-[0.1em] text-[10px] font-mono">
               <tr>
-                <th className="py-3 px-4">Fav</th>
+                <th className="py-3 px-4 w-10">Fav</th>
                 <th className="py-3 px-4">Key</th>
                 <th className="py-3 px-4">Value</th>
                 <th className="py-3 px-4">Version</th>
@@ -269,73 +287,84 @@ export default function KeysPage() {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/[0.06] text-zinc-300 font-mono">
+            <tbody className="divide-y divide-[oklch(1_0_0/4%)] text-[oklch(1_0_0/60%)] font-mono">
               {isLoading ? (
                 [1, 2, 3, 4].map((i) => (
-                  <tr key={i} className="animate-pulse">
-                    <td className="py-3 px-4"><div className="h-4 w-4 bg-zinc-800 rounded" /></td>
-                    <td className="py-3 px-4"><div className="h-4 w-32 bg-zinc-800 rounded" /></td>
-                    <td className="py-3 px-4"><div className="h-4 w-48 bg-zinc-800 rounded" /></td>
-                    <td className="py-3 px-4"><div className="h-4 w-12 bg-zinc-800 rounded" /></td>
-                    <td className="py-3 px-4"><div className="h-4 w-20 bg-zinc-800 rounded" /></td>
-                    <td className="py-3 px-4 text-right"><div className="h-4 w-16 bg-zinc-800 rounded ml-auto" /></td>
+                  <tr key={i}>
+                    <td className="py-3.5 px-4"><div className="skeleton h-4 w-4 rounded" /></td>
+                    <td className="py-3.5 px-4"><div className="skeleton h-4 w-32 rounded" /></td>
+                    <td className="py-3.5 px-4"><div className="skeleton h-4 w-48 rounded" /></td>
+                    <td className="py-3.5 px-4"><div className="skeleton h-4 w-12 rounded" /></td>
+                    <td className="py-3.5 px-4"><div className="skeleton h-4 w-20 rounded" /></td>
+                    <td className="py-3.5 px-4 text-right"><div className="skeleton h-4 w-16 rounded ml-auto" /></td>
                   </tr>
                 ))
               ) : filteredEntries.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-zinc-500">
-                    No key-value pairs found in cluster
+                  <td colSpan={6} className="py-16 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="h-12 w-12 rounded-xl bg-[oklch(1_0_0/4%)] flex items-center justify-center">
+                        <Database className="h-6 w-6 text-[oklch(1_0_0/15%)]" />
+                      </div>
+                      <p className="text-[oklch(1_0_0/30%)] text-xs">No key-value pairs found in cluster</p>
+                    </div>
                   </td>
                 </tr>
               ) : (
-                filteredEntries.map((item) => {
+                filteredEntries.map((item, idx) => {
                   const isFav = favorites.includes(item.key);
 
                   return (
-                    <tr key={item.key} className="hover:bg-white/[0.02] transition-colors group">
+                    <motion.tr
+                      key={item.key}
+                      initial={{ opacity: 0, x: -6 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.25, delay: idx * 0.03 }}
+                      className="hover:bg-[oklch(1_0_0/2%)] transition-colors group"
+                    >
                       <td className="py-3 px-4">
                         <button
                           onClick={() => toggleFavorite(item.key)}
-                          className="text-zinc-600 hover:text-amber-400 transition-colors"
+                          className="text-[oklch(1_0_0/20%)] hover:text-amber-400 transition-colors"
                         >
-                          <Star className={`h-3.5 w-3.5 ${isFav ? 'text-amber-400 fill-amber-400' : ''}`} />
+                          <Star className={cn('h-3.5 w-3.5', isFav && 'text-amber-400 fill-amber-400')} />
                         </button>
                       </td>
-                      <td className="py-3 px-4 text-emerald-400 font-medium flex items-center gap-2">
-                        <KeyRound className="h-3.5 w-3.5 text-emerald-500/60 shrink-0" />
+                      <td className="py-3 px-4 text-emerald-400/90 font-medium flex items-center gap-2">
+                        <KeyRound className="h-3.5 w-3.5 text-emerald-500/40 shrink-0" />
                         <span className="truncate max-w-[200px]">{item.key}</span>
                         <button
                           onClick={() => copyToClipboard(item.key, 'Key')}
-                          className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-zinc-300 transition-opacity ml-1"
+                          className="opacity-0 group-hover:opacity-100 text-[oklch(1_0_0/25%)] hover:text-[oklch(1_0_0/60%)] transition-all ml-1"
                         >
                           {copiedKey === item.key ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
                         </button>
                       </td>
-                      <td className="py-3 px-4 max-w-[280px] truncate text-zinc-300">
+                      <td className="py-3 px-4 max-w-[280px] truncate text-[oklch(1_0_0/50%)]">
                         {item.value ?? '<null>'}
                       </td>
-                      <td className="py-3 px-4 text-zinc-400">
-                        <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-[11px] text-zinc-300">
+                      <td className="py-3 px-4">
+                        <span className="px-2 py-0.5 rounded-md bg-[oklch(1_0_0/4%)] border border-[oklch(1_0_0/6%)] text-[11px] text-[oklch(1_0_0/45%)]">
                           v{item.version}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-zinc-400">
+                      <td className="py-3 px-4">
                         {item.leaseId ? (
-                          <Badge variant="outline" className="bg-purple-500/10 text-purple-400 border-purple-500/20 text-[10px]">
-                            <Clock className="h-3 w-3 mr-1" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/8 text-purple-400/80 border border-purple-500/15 text-[10px]">
+                            <Clock className="h-3 w-3" />
                             {item.leaseId}
-                          </Badge>
+                          </span>
                         ) : (
-                          <span className="text-zinc-600">—</span>
+                          <span className="text-[oklch(1_0_0/15%)]">—</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => copyToClipboard(item.value || '', 'Value')}
-                            className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10"
+                            className="h-7 w-7 text-[oklch(1_0_0/25%)] hover:text-white hover:bg-[oklch(1_0_0/6%)] rounded-lg"
                             title="Copy Value"
                           >
                             <Copy className="h-3.5 w-3.5" />
@@ -350,7 +379,7 @@ export default function KeysPage() {
                               setErrorMsg(null);
                               setEditDialogOpen(true);
                             }}
-                            className="h-7 w-7 text-zinc-400 hover:text-white hover:bg-white/10"
+                            className="h-7 w-7 text-[oklch(1_0_0/25%)] hover:text-white hover:bg-[oklch(1_0_0/6%)] rounded-lg"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
@@ -362,56 +391,56 @@ export default function KeysPage() {
                               setErrorMsg(null);
                               setDeleteDialogOpen(true);
                             }}
-                            className="h-7 w-7 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
+                            className="h-7 w-7 text-rose-400/60 hover:text-rose-300 hover:bg-rose-500/8 rounded-lg"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </td>
-                    </tr>
+                    </motion.tr>
                   );
                 })
               )}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
 
       {/* Create Key Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-zinc-100 max-w-md">
+        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-400">
               <Plus className="h-5 w-5" /> Create Key-Value
             </DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
+            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
               Store a key-value entry into the AtlasKV Raft state machine.
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300 font-mono">Key</label>
+              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">Key</label>
               <Input
                 placeholder="e.g. app/config/theme"
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
-                className="bg-zinc-950 border-white/10 text-xs font-mono"
+                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300 font-mono">Value</label>
+              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">Value</label>
               <Input
                 placeholder="e.g. dark"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="bg-zinc-950 border-white/10 text-xs font-mono"
+                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
               />
             </div>
           </div>
@@ -420,14 +449,14 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setCreateDialogOpen(false)}
-              className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs"
+              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateKey}
               disabled={putMutation.isPending}
-              className="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-semibold text-xs"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold text-xs rounded-lg border-0"
             >
               {putMutation.isPending ? 'Saving...' : 'Save Key'}
             </Button>
@@ -437,42 +466,42 @@ export default function KeysPage() {
 
       {/* Edit / CAS Key Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-zinc-100 max-w-md">
+        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-400">
               <Edit2 className="h-5 w-5" /> Edit Key: {selectedKey?.key}
             </DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
+            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
               Perform a direct update or Compare-And-Swap (CAS) transaction.
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-4 py-2 text-xs">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-950 border border-white/10">
-              <span className="font-mono text-zinc-300">Expected Version: v{selectedKey?.version}</span>
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--surface-0)] border border-[oklch(1_0_0/8%)]">
+              <span className="font-mono text-[oklch(1_0_0/50%)]">Expected Version: v{selectedKey?.version}</span>
               <label className="flex items-center gap-2 font-mono text-xs text-emerald-400 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isCasMode}
                   onChange={(e) => setIsCasMode(e.target.checked)}
-                  className="rounded bg-zinc-900 border-white/20 text-emerald-500"
+                  className="rounded bg-[var(--surface-0)] border-[oklch(1_0_0/15%)] text-emerald-500"
                 />
                 Atomic CAS
               </label>
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-zinc-300 font-mono">New Value</label>
+              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">New Value</label>
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="bg-zinc-950 border-white/10 text-xs font-mono"
+                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
               />
             </div>
           </div>
@@ -481,14 +510,14 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setEditDialogOpen(false)}
-              className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs"
+              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleUpdateKey}
               disabled={putMutation.isPending || casMutation.isPending}
-              className="bg-emerald-500 hover:bg-emerald-600 text-zinc-950 font-semibold text-xs"
+              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold text-xs rounded-lg border-0"
             >
               {isCasMode ? 'CAS Update' : 'Update Value'}
             </Button>
@@ -498,18 +527,18 @@ export default function KeysPage() {
 
       {/* Delete Key Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-zinc-900 border-white/10 text-zinc-100 max-w-md">
+        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-rose-400">
               <Trash2 className="h-5 w-5" /> Delete Key
             </DialogTitle>
-            <DialogDescription className="text-zinc-400 text-xs">
-              Are you sure you want to delete <span className="font-mono text-zinc-200">{selectedKey?.key}</span>?
+            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
+              Are you sure you want to delete <span className="font-mono text-[oklch(1_0_0/65%)]">{selectedKey?.key}</span>?
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
               {errorMsg}
             </div>
           )}
@@ -518,14 +547,14 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs"
+              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
             >
               Cancel
             </Button>
             <Button
               onClick={handleDeleteKey}
               disabled={deleteMutation.isPending}
-              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs"
+              className="bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs rounded-lg"
             >
               Confirm Delete
             </Button>

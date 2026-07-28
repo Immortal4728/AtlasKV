@@ -1,12 +1,15 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Eye, Play, Square, Trash2, Radio, Terminal as TerminalIcon, Download, Search, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Eye, Play, Square, Trash2, Radio, Terminal as TerminalIcon, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { PageHeader } from '@/components/ui/page-header';
 import { getSavedBaseUrl } from '@/services/api';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface LogEntry {
   id: string;
@@ -23,7 +26,6 @@ export default function WatchPage() {
   const [isStreaming, setIsStreaming] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
   const [logFilter, setLogFilter] = useState<'ALL' | 'PUT' | 'DELETE' | 'EXPIRE' | 'CAS'>('ALL');
-  const [logSearch, setLogSearch] = useState('');
 
   const [logs, setLogs] = useState<LogEntry[]>([
     {
@@ -128,61 +130,56 @@ export default function WatchPage() {
   };
 
   const filteredLogs = logs.filter((l) => {
-    const matchesFilter = logFilter === 'ALL' || l.type === logFilter;
-    const matchesSearch =
-      l.key.toLowerCase().includes(logSearch.toLowerCase()) ||
-      (l.value && l.value.toLowerCase().includes(logSearch.toLowerCase()));
-    return matchesFilter && matchesSearch;
+    return logFilter === 'ALL' || l.type === logFilter;
   });
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Eye className="h-5 w-5 text-cyan-400" />
-            Real-Time Watch Terminal (SSE)
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Subscribe to real-time Server-Sent Events (SSE) key updates across the Raft cluster
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className={
+      <PageHeader
+        title="Real-Time Watch Terminal (SSE)"
+        description="Subscribe to real-time Server-Sent Events (SSE) key updates across the Raft cluster"
+        icon={Eye}
+        iconColor="text-cyan-400"
+        badge={
+          <span
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium border',
               isStreaming
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-xs py-1 px-3 gap-1.5 font-mono'
-                : 'bg-zinc-800 text-zinc-400 border-zinc-700 text-xs py-1 px-3 gap-1.5 font-mono'
-            }
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                : 'bg-[oklch(1_0_0/4%)] text-[oklch(1_0_0/40%)] border-[oklch(1_0_0/8%)]'
+            )}
           >
-            <Radio className={`h-3 w-3 ${isStreaming ? 'animate-pulse text-emerald-400' : ''}`} />
-            {isStreaming ? 'STREAM ACTIVE' : 'STREAM PAUSED'}
-          </Badge>
-        </div>
-      </div>
+            <Radio className={cn('h-3 w-3', isStreaming && 'animate-pulse text-emerald-400')} />
+            {isStreaming ? 'STREAM ACTIVE' : 'PAUSED'}
+          </span>
+        }
+      />
 
       {/* Control Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-zinc-900/60 p-3 rounded-xl border border-white/[0.08] backdrop-blur-md">
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 glass-card rounded-xl p-3"
+      >
         <div className="flex items-center gap-3 flex-1">
           <div className="relative flex-1">
-            <TerminalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+            <TerminalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[oklch(1_0_0/25%)]" />
             <Input
               placeholder="Key or prefix to watch..."
               value={targetKey}
               onChange={(e) => setTargetKey(e.target.value)}
-              className="pl-9 bg-zinc-950/50 border-white/10 text-xs font-mono text-zinc-200 placeholder:text-zinc-500 focus-visible:ring-cyan-500/50"
+              className="pl-9 bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] placeholder:text-[oklch(1_0_0/25%)] focus-visible:ring-cyan-500/30 rounded-lg"
             />
           </div>
 
-          <label className="flex items-center gap-2 text-xs font-mono text-zinc-300 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-xs font-mono text-[oklch(1_0_0/60%)] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={isPrefix}
               onChange={(e) => setIsPrefix(e.target.checked)}
-              className="rounded bg-zinc-950 border-white/20 text-cyan-500"
+              className="rounded bg-[var(--surface-0)] border-[oklch(1_0_0/15%)] text-cyan-500"
             />
             Prefix Watch
           </label>
@@ -195,11 +192,12 @@ export default function WatchPage() {
               toast.info(isStreaming ? 'Watch stream paused' : 'Watch stream resumed');
             }}
             variant="outline"
-            className={
+            className={cn(
+              'text-xs gap-1.5 rounded-lg border',
               isStreaming
-                ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10 text-xs gap-1.5'
-                : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 text-xs gap-1.5'
-            }
+                ? 'border-rose-500/30 text-rose-400 hover:bg-rose-500/10'
+                : 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10'
+            )}
           >
             {isStreaming ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             {isStreaming ? 'Pause' : 'Start'}
@@ -208,7 +206,7 @@ export default function WatchPage() {
           <Button
             onClick={handleExportLogs}
             variant="outline"
-            className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs gap-1.5"
+            className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs gap-1.5 rounded-lg"
           >
             <Download className="h-3.5 w-3.5" />
             Export Logs
@@ -217,82 +215,85 @@ export default function WatchPage() {
           <Button
             onClick={handleClear}
             variant="outline"
-            className="border-white/10 text-zinc-400 hover:bg-white/5 text-xs gap-1.5"
+            className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/40%)] hover:bg-[oklch(1_0_0/4%)] text-xs gap-1.5 rounded-lg"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Clear
           </Button>
         </div>
-      </div>
+      </motion.div>
 
       {/* Terminal View */}
-      <div className="rounded-xl border border-white/[0.12] bg-[#050507] overflow-hidden shadow-2xl font-mono text-xs">
-        {/* Terminal Sub-header / Filters */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-2 bg-zinc-950 border-b border-white/[0.08] text-zinc-400 gap-2">
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.15 }}
+        className="glass-card rounded-xl overflow-hidden p-0 font-mono text-xs border border-[oklch(1_0_0/8%)]"
+      >
+        {/* Terminal Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-2.5 bg-[var(--surface-0)]/80 border-b border-[oklch(1_0_0/6%)] text-[oklch(1_0_0/40%)] gap-2">
           <div className="flex items-center gap-2">
-            <span className="text-[11px] text-zinc-500 font-semibold">Filter:</span>
+            <span className="text-[11px] text-[oklch(1_0_0/30%)] font-semibold">Filter:</span>
             {(['ALL', 'PUT', 'DELETE', 'EXPIRE', 'CAS'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setLogFilter(type)}
-                className={`px-2 py-0.5 rounded text-[10px] transition-colors ${
+                className={cn(
+                  'px-2 py-0.5 rounded text-[10px] transition-colors',
                   logFilter === type
-                    ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
+                    ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/20 font-bold'
+                    : 'text-[oklch(1_0_0/30%)] hover:text-[oklch(1_0_0/60%)]'
+                )}
               >
                 {type}
               </button>
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-[11px] text-zinc-400 cursor-pointer select-none">
+          <label className="flex items-center gap-2 text-[11px] text-[oklch(1_0_0/40%)] cursor-pointer select-none">
             <input
               type="checkbox"
               checked={autoScroll}
               onChange={(e) => setAutoScroll(e.target.checked)}
-              className="rounded bg-zinc-900 border-white/20 text-cyan-500"
+              className="rounded bg-[var(--surface-0)] border-[oklch(1_0_0/15%)] text-cyan-500"
             />
             Auto-Scroll
           </label>
         </div>
 
-        {/* Terminal Body */}
+        {/* Terminal Console */}
         <div
           ref={scrollRef}
-          className="h-[480px] overflow-y-auto p-4 space-y-2 font-mono scrollbar-thin scrollbar-thumb-zinc-800"
+          className="h-[480px] overflow-y-auto p-4 space-y-2 font-mono scrollbar-thin scrollbar-thumb-[oklch(1_0_0/8%)] bg-[#050507]/90"
         >
           {filteredLogs.length === 0 ? (
-            <div className="text-zinc-600 text-center py-20">
+            <div className="text-[oklch(1_0_0/20%)] text-center py-20">
               No watch events matching filter
             </div>
           ) : (
             filteredLogs.map((log) => (
-              <div key={log.id} className="flex items-start gap-3 hover:bg-white/[0.02] p-1 rounded transition-colors">
-                <span className="text-zinc-600 shrink-0 select-none">[{log.timestamp}]</span>
+              <div key={log.id} className="flex items-start gap-3 hover:bg-[oklch(1_0_0/2%)] p-1 rounded transition-colors">
+                <span className="text-[oklch(1_0_0/20%)] shrink-0 select-none">[{log.timestamp}]</span>
                 <span
-                  className={
-                    log.type === 'PUT'
-                      ? 'text-emerald-400 font-bold shrink-0'
-                      : log.type === 'DELETE'
-                      ? 'text-rose-400 font-bold shrink-0'
-                      : log.type === 'EXPIRE'
-                      ? 'text-amber-400 font-bold shrink-0'
-                      : log.type === 'CAS'
-                      ? 'text-purple-400 font-bold shrink-0'
-                      : 'text-cyan-400 font-bold shrink-0'
-                  }
+                  className={cn(
+                    'font-bold shrink-0',
+                    log.type === 'PUT' && 'text-emerald-400',
+                    log.type === 'DELETE' && 'text-rose-400',
+                    log.type === 'EXPIRE' && 'text-amber-400',
+                    log.type === 'CAS' && 'text-purple-400',
+                    log.type === 'STATUS' && 'text-cyan-400'
+                  )}
                 >
                   [{log.type}]
                 </span>
-                <span className="text-zinc-200 font-medium">{log.key}</span>
-                {log.value && <span className="text-zinc-400 truncate max-w-md">= {log.value}</span>}
-                {log.version && <span className="text-zinc-500 text-[10px] ml-auto">v{log.version}</span>}
+                <span className="text-[oklch(1_0_0/80%)] font-medium">{log.key}</span>
+                {log.value && <span className="text-[oklch(1_0_0/40%)] truncate max-w-md">= {log.value}</span>}
+                {log.version && <span className="text-[oklch(1_0_0/25%)] text-[10px] ml-auto">v{log.version}</span>}
               </div>
             ))
           )}
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

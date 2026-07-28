@@ -1,16 +1,36 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { useClusterStatus } from '@/hooks/use-cluster';
 import { useSidebar } from './sidebar-context';
-import { Search, Wifi, WifiOff, Menu, Command as CommandIcon } from 'lucide-react';
+import { Search, Wifi, WifiOff, Menu, Bell } from 'lucide-react';
 import { CommandPalette } from './command-palette';
+import { motion } from 'framer-motion';
+
+const pageTitles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/cluster': 'Cluster Topology',
+  '/keys': 'Key Explorer',
+  '/prefix': 'Prefix Queries',
+  '/leases': 'Lease Management',
+  '/watch': 'Watch Terminal',
+  '/metrics': 'Metrics & Analytics',
+  '/history': 'Version History',
+  '/settings': 'Settings',
+  '/members': 'Members',
+  '/explorer': 'Data Explorer',
+  '/playground': 'Playground',
+  '/logs': 'Raft Logs',
+  '/about': 'About',
+};
 
 export function Navbar() {
   const { data: status, isError } = useClusterStatus();
   const { toggle } = useSidebar();
   const [commandOpen, setCommandOpen] = useState(false);
+  const pathname = usePathname();
 
   // Keyboard shortcut listener for Ctrl+K / Cmd+K
   useEffect(() => {
@@ -29,63 +49,91 @@ export function Navbar() {
   const leader = status?.currentLeader ?? '—';
   const term = status?.currentTerm ?? 0;
 
+  // Determine page title from pathname
+  const currentPage = Object.entries(pageTitles).find(([path]) =>
+    path === '/dashboard'
+      ? pathname === '/dashboard'
+      : pathname.startsWith(path)
+  );
+  const pageTitle = currentPage?.[1] ?? 'Studio';
+
   return (
     <>
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/[0.06] bg-[#0a0a0b]/80 backdrop-blur-xl px-4 sm:px-6">
-        {/* Left: Hamburger + Page title context */}
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-[oklch(1_0_0/5%)] bg-[var(--surface-0)]/70 backdrop-blur-2xl px-4 sm:px-6">
+        {/* Left: Hamburger + Breadcrumb */}
         <div className="flex items-center gap-3">
           <button
             onClick={toggle}
             aria-label="Toggle sidebar menu"
-            className="lg:hidden p-1.5 -ml-1 text-white/50 hover:text-white rounded hover:bg-white/[0.04]"
+            className="lg:hidden p-1.5 -ml-1 text-[oklch(1_0_0/40%)] hover:text-white rounded-lg hover:bg-[oklch(1_0_0/4%)] transition-colors"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <span className="text-xs font-semibold uppercase tracking-wider text-zinc-400 font-mono">AtlasKV Management Console</span>
+
+          <div className="flex items-center gap-2 text-[13px]">
+            <span className="text-[oklch(1_0_0/25%)] font-medium hidden sm:inline">AtlasKV</span>
+            <span className="text-[oklch(1_0_0/15%)] hidden sm:inline">/</span>
+            <motion.span
+              key={pageTitle}
+              initial={{ opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.2 }}
+              className="font-semibold text-[oklch(1_0_0/70%)]"
+            >
+              {pageTitle}
+            </motion.span>
+          </div>
         </div>
 
-        {/* Right: Status indicators & Command Palette Search */}
-        <div className="flex items-center gap-3 sm:gap-4">
+        {/* Right: Status indicators & Search */}
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Quick Search Button */}
           <button
             onClick={() => setCommandOpen(true)}
-            className="hidden sm:flex items-center gap-2 rounded-lg border border-white/[0.08] bg-white/[0.03] px-3 py-1.5 text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors cursor-pointer text-xs"
+            className="hidden sm:flex items-center gap-2 rounded-lg border border-[oklch(1_0_0/6%)] bg-[oklch(1_0_0/3%)] px-3 py-1.5 text-[oklch(1_0_0/35%)] hover:text-[oklch(1_0_0/60%)] hover:bg-[oklch(1_0_0/5%)] hover:border-[oklch(1_0_0/10%)] transition-all cursor-pointer text-xs"
           >
-            <Search className="h-3.5 w-3.5 text-zinc-500" />
-            <span className="text-xs text-zinc-400">Quick Actions...</span>
-            <kbd className="ml-4 rounded border border-white/10 bg-zinc-900 px-1.5 py-0.5 text-[10px] font-mono text-emerald-400">
+            <Search className="h-3.5 w-3.5 text-[oklch(1_0_0/25%)]" />
+            <span className="text-xs text-[oklch(1_0_0/30%)]">Search...</span>
+            <kbd className="ml-4 rounded-md border border-[oklch(1_0_0/8%)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-mono text-emerald-400/70">
               ⌘K
             </kbd>
           </button>
 
           {/* Term */}
-          <div className="hidden md:flex items-center gap-1.5">
-            <span className="text-[11px] text-white/30 uppercase tracking-wider font-mono">Term</span>
-            <span className="text-xs font-mono text-white/70">{term}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[oklch(1_0_0/3%)] border border-[oklch(1_0_0/5%)]">
+            <span className="text-[10px] text-[oklch(1_0_0/25%)] uppercase tracking-wider font-mono">Term</span>
+            <span className="text-[11px] font-mono text-[oklch(1_0_0/60%)] font-medium">{term}</span>
           </div>
 
           {/* Leader */}
-          <div className="hidden md:flex items-center gap-1.5">
-            <span className="text-[11px] text-white/30 uppercase tracking-wider font-mono">Leader</span>
-            <span className="text-xs font-mono text-emerald-400">{leader}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[oklch(1_0_0/3%)] border border-[oklch(1_0_0/5%)]">
+            <span className="text-[10px] text-[oklch(1_0_0/25%)] uppercase tracking-wider font-mono">Leader</span>
+            <span className="text-[11px] font-mono text-emerald-400/80 font-medium">{leader}</span>
           </div>
 
           {/* Connection Status */}
-          <Badge
-            variant={isConnected ? 'default' : 'destructive'}
-            className={
+          <div
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium font-mono border transition-all',
               isConnected
-                ? 'gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15 text-[11px] font-medium font-mono'
-                : 'gap-1.5 text-[11px] font-medium font-mono'
-            }
-          >
-            {isConnected ? (
-              <Wifi className="h-3 w-3 animate-pulse" />
-            ) : (
-              <WifiOff className="h-3 w-3" />
+                ? 'bg-emerald-500/8 text-emerald-400 border-emerald-500/15'
+                : 'bg-rose-500/8 text-rose-400 border-rose-500/15'
             )}
-            {isConnected ? role : 'Disconnected'}
-          </Badge>
+          >
+            <span className="relative">
+              {isConnected ? (
+                <>
+                  <Wifi className="h-3 w-3" />
+                  <span className="absolute inset-0 animate-ping">
+                    <Wifi className="h-3 w-3 text-emerald-400/30" />
+                  </span>
+                </>
+              ) : (
+                <WifiOff className="h-3 w-3" />
+              )}
+            </span>
+            <span>{isConnected ? role : 'Offline'}</span>
+          </div>
         </div>
       </header>
 
@@ -93,4 +141,8 @@ export function Navbar() {
       <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
     </>
   );
+}
+
+function cn(...classes: (string | undefined | false)[]) {
+  return classes.filter(Boolean).join(' ');
 }

@@ -6,6 +6,7 @@ import { StatCard } from '@/components/dashboard/stat-card';
 import { ClusterHealthBanner } from '@/components/dashboard/cluster-health-banner';
 import { MembersBanner } from '@/components/dashboard/members-banner';
 import { ConnectionError } from '@/components/dashboard/connection-error';
+import { PageHeader } from '@/components/ui/page-header';
 import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import {
@@ -14,11 +15,9 @@ import {
   CheckCheck,
   ScrollText,
   Database,
-  BookOpen,
   Timer,
   Users,
   Clock,
-  GitBranch,
   Eye,
   Activity,
   Zap,
@@ -42,6 +41,19 @@ function formatLatency(ms: number | undefined): string {
   if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
   return `${ms.toFixed(2)}ms`;
 }
+
+const stagger = {
+  animate: {
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const fadeUp = {
+  initial: { opacity: 0, y: 10 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
+};
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
@@ -72,19 +84,18 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
-      >
-        <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-          <Activity className="h-5 w-5 text-emerald-400" />
-          AtlasKV Cluster Dashboard
-        </h1>
-        <p className="text-xs text-zinc-400 mt-0.5">
-          Live real-time telemetry from AtlasKV distributed Raft consensus nodes (Auto-refresh 3s)
-        </p>
-      </motion.div>
+      <PageHeader
+        title="Cluster Dashboard"
+        description="Live real-time telemetry from AtlasKV distributed Raft consensus nodes (Auto-refresh 3s)"
+        icon={Activity}
+        iconColor="text-emerald-400"
+        badge={
+          <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400/70 bg-emerald-500/8 px-2 py-0.5 rounded-md border border-emerald-500/15">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            Live
+          </span>
+        }
+      />
 
       {/* Cluster Health Banner */}
       <ClusterHealthBanner
@@ -97,76 +108,110 @@ export default function DashboardPage() {
       />
 
       {/* Primary Raft Consensus Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Current Term"
-          value={status?.currentTerm ?? 47}
-          icon={Hash}
-          accentColor="blue"
-          subtitle="Active Raft election term"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Commit Index"
-          value={(metrics?.commitIndex ?? status?.commitIndex ?? 34601).toLocaleString()}
-          icon={GitCommitHorizontal}
-          accentColor="emerald"
-          subtitle="Highest committed log index"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Applied Index"
-          value={(metrics?.lastApplied ?? status?.lastApplied ?? 34601).toLocaleString()}
-          icon={CheckCheck}
-          accentColor="purple"
-          subtitle="Applied to state machine"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Active Log Length"
-          value={(metrics?.logLength ?? 34601).toLocaleString()}
-          icon={ScrollText}
-          accentColor="cyan"
-          subtitle="WAL log entry total"
-          loading={isLoading}
-        />
-      </div>
+      <motion.div
+        variants={stagger}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Current Term"
+            value={status?.currentTerm ?? 47}
+            icon={Hash}
+            accentColor="blue"
+            subtitle="Active Raft election term"
+            loading={isLoading}
+            delay={0}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Commit Index"
+            value={(metrics?.commitIndex ?? status?.commitIndex ?? 34601).toLocaleString()}
+            icon={GitCommitHorizontal}
+            accentColor="emerald"
+            subtitle="Highest committed log index"
+            loading={isLoading}
+            delay={1}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Applied Index"
+            value={(metrics?.lastApplied ?? status?.lastApplied ?? 34601).toLocaleString()}
+            icon={CheckCheck}
+            accentColor="purple"
+            subtitle="Applied to state machine"
+            loading={isLoading}
+            delay={2}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Active Log Length"
+            value={(metrics?.logLength ?? 34601).toLocaleString()}
+            icon={ScrollText}
+            accentColor="cyan"
+            subtitle="WAL log entry total"
+            loading={isLoading}
+            delay={3}
+          />
+        </motion.div>
+      </motion.div>
 
       {/* Key-Value & Performance Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Total Store Keys"
-          value={(metrics?.kvStoreSize ?? 8648).toLocaleString()}
-          icon={Database}
-          accentColor="amber"
-          subtitle="Active key-value entries"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Read Latency (p50)"
-          value={formatLatency(metrics?.averageReadLatencyMs)}
-          icon={Timer}
-          accentColor="emerald"
-          subtitle="Linearizable ReadIndex"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Write Latency (p50)"
-          value={formatLatency(metrics?.averageCasLatencyMs || 1.85)}
-          icon={Zap}
-          accentColor="purple"
-          subtitle="Raft write quorum consensus"
-          loading={isLoading}
-        />
-        <StatCard
-          title="Active Leases"
-          value={leases?.length ?? 3}
-          icon={Clock}
-          accentColor="cyan"
-          subtitle="Distributed TTL leases"
-          loading={isLoading}
-        />
-      </div>
+      <motion.div
+        variants={stagger}
+        initial="initial"
+        animate="animate"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+      >
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Total Store Keys"
+            value={(metrics?.kvStoreSize ?? 8648).toLocaleString()}
+            icon={Database}
+            accentColor="amber"
+            subtitle="Active key-value entries"
+            loading={isLoading}
+            delay={4}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Read Latency (p50)"
+            value={formatLatency(metrics?.averageReadLatencyMs)}
+            icon={Timer}
+            accentColor="emerald"
+            subtitle="Linearizable ReadIndex"
+            loading={isLoading}
+            delay={5}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Write Latency (p50)"
+            value={formatLatency(metrics?.averageCasLatencyMs || 1.85)}
+            icon={Zap}
+            accentColor="purple"
+            subtitle="Raft write quorum consensus"
+            loading={isLoading}
+            delay={6}
+          />
+        </motion.div>
+        <motion.div variants={fadeUp}>
+          <StatCard
+            title="Active Leases"
+            value={leases?.length ?? 3}
+            icon={Clock}
+            accentColor="cyan"
+            subtitle="Distributed TTL leases"
+            loading={isLoading}
+            delay={7}
+          />
+        </motion.div>
+      </motion.div>
 
       {/* Bottom Cluster Topology & Node Overview */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -189,6 +234,7 @@ export default function DashboardPage() {
             accentColor="cyan"
             subtitle={`Node Leader: ${status?.currentLeader ?? 'node3'}`}
             loading={isLoading}
+            delay={8}
           />
           <StatCard
             title="Active Watch Sessions"
@@ -197,6 +243,7 @@ export default function DashboardPage() {
             accentColor="amber"
             subtitle="SSE Live Event Streams"
             loading={isLoading}
+            delay={9}
           />
         </div>
       </div>

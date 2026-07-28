@@ -2,7 +2,7 @@
 
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { Users, GitBranch } from 'lucide-react';
+import { Users, GitBranch, Crown, Server } from 'lucide-react';
 
 interface MembersBannerProps {
   members: string[];
@@ -19,12 +19,13 @@ export function MembersBanner({
 }: MembersBannerProps) {
   if (loading) {
     return (
-      <div className="rounded-xl border border-white/[0.06] bg-[#111113] p-5 animate-pulse">
+      <div className="glass-card rounded-xl p-5">
         <div className="space-y-3">
-          <div className="h-3 w-24 rounded bg-white/[0.06]" />
-          <div className="flex gap-2">
-            <div className="h-8 w-20 rounded-lg bg-white/[0.04]" />
-            <div className="h-8 w-20 rounded-lg bg-white/[0.04]" />
+          <div className="skeleton h-3 w-24 rounded" />
+          <div className="flex gap-3">
+            <div className="skeleton h-16 w-32 rounded-lg" />
+            <div className="skeleton h-16 w-32 rounded-lg" />
+            <div className="skeleton h-16 w-32 rounded-lg" />
           </div>
         </div>
       </div>
@@ -35,18 +36,18 @@ export function MembersBanner({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35, ease: 'easeOut', delay: 0.15 }}
-      className="rounded-xl border border-white/[0.06] bg-[#111113] p-5"
+      transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: 0.15 }}
+      className="glass-card rounded-xl p-5"
     >
-      <div className="flex items-center justify-between mb-3.5">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-white/30" strokeWidth={1.8} />
-          <h3 className="text-[12px] font-medium uppercase tracking-wider text-white/30">
+          <Users className="h-4 w-4 text-[oklch(1_0_0/25%)]" strokeWidth={1.8} />
+          <h3 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[oklch(1_0_0/28%)]">
             Cluster Members
           </h3>
         </div>
         {isJoint && (
-          <div className="flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-1 border border-amber-500/20">
+          <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/15">
             <GitBranch className="h-3 w-3 text-amber-400" />
             <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
               Joint Consensus
@@ -55,40 +56,72 @@ export function MembersBanner({
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {members.map((member) => (
-          <div
-            key={member}
-            className={cn(
-              'flex items-center gap-2 rounded-lg border px-3 py-1.5 transition-colors',
-              member === leader
-                ? 'border-emerald-500/20 bg-emerald-500/[0.06]'
-                : 'border-white/[0.06] bg-white/[0.02]'
-            )}
-          >
-            <div
+      <div className="flex flex-wrap gap-3">
+        {members.map((member, idx) => {
+          const isLeader = member === leader;
+
+          return (
+            <motion.div
+              key={member}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3, delay: idx * 0.08 }}
+              whileHover={{ scale: 1.03, transition: { duration: 0.15 } }}
               className={cn(
-                'h-2 w-2 rounded-full',
-                member === leader
-                  ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50'
-                  : 'bg-white/20'
-              )}
-            />
-            <span
-              className={cn(
-                'text-xs font-mono',
-                member === leader ? 'text-emerald-400/80' : 'text-white/50'
+                'relative flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-200 cursor-default',
+                isLeader
+                  ? 'border-emerald-500/20 bg-emerald-500/[0.06] shadow-[0_0_16px_oklch(0.72_0.19_160/6%)]'
+                  : 'border-[oklch(1_0_0/6%)] bg-[oklch(1_0_0/2%)] hover:border-[oklch(1_0_0/10%)] hover:bg-[oklch(1_0_0/3%)]'
               )}
             >
-              {member}
-            </span>
-            {member === leader && (
-              <span className="text-[9px] uppercase tracking-wider text-emerald-400/50 font-semibold">
-                Leader
-              </span>
-            )}
-          </div>
-        ))}
+              <div
+                className={cn(
+                  'flex h-8 w-8 items-center justify-center rounded-lg border',
+                  isLeader
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                    : 'bg-[oklch(1_0_0/4%)] border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/40%)]'
+                )}
+              >
+                {isLeader ? (
+                  <Crown className="h-3.5 w-3.5" />
+                ) : (
+                  <Server className="h-3.5 w-3.5" />
+                )}
+              </div>
+
+              <div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'text-xs font-mono font-medium',
+                      isLeader ? 'text-emerald-400/90' : 'text-[oklch(1_0_0/55%)]'
+                    )}
+                  >
+                    {member}
+                  </span>
+                  {isLeader && (
+                    <span className="text-[9px] uppercase tracking-wider text-emerald-400/50 font-semibold bg-emerald-500/8 px-1.5 py-0.5 rounded">
+                      Leader
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span
+                    className={cn(
+                      'h-1.5 w-1.5 rounded-full',
+                      isLeader
+                        ? 'bg-emerald-400 shadow-[0_0_6px_oklch(0.72_0.19_160/60%)]'
+                        : 'bg-[oklch(1_0_0/20%)]'
+                    )}
+                  />
+                  <span className="text-[10px] text-[oklch(1_0_0/25%)] font-mono">
+                    {isLeader ? 'Active' : 'Following'}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </motion.div>
   );

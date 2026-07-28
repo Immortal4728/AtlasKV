@@ -1,9 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { BarChart3, Activity, Timer, Database, Zap, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import { useMetrics } from '@/hooks/use-cluster';
+import { cn } from '@/lib/utils';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -74,47 +77,49 @@ export default function MetricsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-emerald-400" />
-            Live Cluster Metrics & Analytics
-          </h1>
-          <p className="text-xs text-zinc-400 mt-1">
-            Real-time consensus telemetry, ReadIndex latencies, CAS operations, and storage metrics
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={() => refetch()}
-            variant="outline"
-            className="border-white/10 text-zinc-300 hover:bg-white/5 text-xs gap-1.5"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-
-          {['5m', '15m', '1h', '24h'].map((r) => (
-            <button
-              key={r}
-              onClick={() => setTimeRange(r)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-colors ${
-                timeRange === r
-                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                  : 'bg-zinc-900 text-zinc-400 border border-white/10 hover:text-zinc-200'
-              }`}
+      <PageHeader
+        title="Live Cluster Metrics & Analytics"
+        description="Real-time consensus telemetry, ReadIndex latencies, CAS operations, and storage metrics"
+        icon={BarChart3}
+        iconColor="text-emerald-400"
+        actions={
+          <>
+            <Button
+              onClick={() => refetch()}
+              variant="outline"
+              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] hover:text-white text-xs gap-1.5 rounded-lg"
             >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+
+            {['5m', '15m', '1h', '24h'].map((r) => (
+              <button
+                key={r}
+                onClick={() => setTimeRange(r)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-mono transition-all border',
+                  timeRange === r
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20 shadow-sm'
+                    : 'bg-[var(--surface-0)] text-[oklch(1_0_0/40%)] border-[oklch(1_0_0/8%)] hover:text-white hover:border-[oklch(1_0_0/15%)]'
+                )}
+              >
+                {r}
+              </button>
+            ))}
+          </>
+        }
+      />
 
       {/* Primary Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Read & Write Latency Chart */}
-        <div className="p-5 rounded-xl border border-white/[0.08] bg-zinc-900/50 backdrop-blur-md space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Timer className="h-4 w-4 text-emerald-400" />
@@ -133,21 +138,26 @@ export default function MetricsPage() {
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={latencyChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="time" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={10} tickLine={false} unit="ms" />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
+                <XAxis dataKey="time" stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
+                <YAxis stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} unit="ms" />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: 'oklch(0.12 0.008 280)', borderColor: 'oklch(1 0 0 / 10%)', borderRadius: '8px', fontSize: '11px' }}
                 />
                 <Line type="monotone" dataKey="read" stroke="#10b981" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="write" stroke="#06b6d4" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Throughput Chart */}
-        <div className="p-5 rounded-xl border border-white/[0.08] bg-zinc-900/50 backdrop-blur-md space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-amber-400" />
@@ -163,23 +173,28 @@ export default function MetricsPage() {
           <div className="h-[240px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={throughputData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="time" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={10} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
+                <XAxis dataKey="time" stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
+                <YAxis stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: 'oklch(0.12 0.008 280)', borderColor: 'oklch(1 0 0 / 10%)', borderRadius: '8px', fontSize: '11px' }}
                 />
                 <Area type="monotone" dataKey="reads" stroke="#f59e0b" fill="#f59e0b20" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
 
       {/* Secondary Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* CAS & Prefix Latency */}
-        <div className="p-5 rounded-xl border border-white/[0.08] bg-zinc-900/50 backdrop-blur-md space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.15 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="h-4 w-4 text-purple-400" />
@@ -190,20 +205,25 @@ export default function MetricsPage() {
           <div className="h-[220px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={casChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="time" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={10} tickLine={false} unit="ms" />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
+                <XAxis dataKey="time" stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
+                <YAxis stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} unit="ms" />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: 'oklch(0.12 0.008 280)', borderColor: 'oklch(1 0 0 / 10%)', borderRadius: '8px', fontSize: '11px' }}
                 />
                 <Bar dataKey="casAvg" fill="#a855f7" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
 
         {/* Storage & WAL Log Length */}
-        <div className="p-5 rounded-xl border border-white/[0.08] bg-zinc-900/50 backdrop-blur-md space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="glass-card rounded-xl p-5 space-y-4"
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Database className="h-4 w-4 text-cyan-400" />
@@ -214,17 +234,17 @@ export default function MetricsPage() {
           <div className="h-[220px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={storageData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" />
-                <XAxis dataKey="time" stroke="#71717a" fontSize={10} tickLine={false} />
-                <YAxis stroke="#71717a" fontSize={10} tickLine={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="oklch(1 0 0 / 6%)" />
+                <XAxis dataKey="time" stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
+                <YAxis stroke="oklch(1 0 0 / 30%)" fontSize={10} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: 'oklch(0.12 0.008 280)', borderColor: 'oklch(1 0 0 / 10%)', borderRadius: '8px', fontSize: '11px' }}
                 />
                 <Area type="monotone" dataKey="keys" stroke="#06b6d4" fill="#06b6d420" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       </div>
     </div>
   );

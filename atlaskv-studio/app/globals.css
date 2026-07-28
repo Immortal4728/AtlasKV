@@ -85,37 +85,52 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  --background: oklch(0.098 0.005 285);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: oklch(0.135 0.005 285);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: oklch(0.12 0.008 280);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --secondary: oklch(0.2 0.01 280);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: oklch(0.2 0.008 280);
+  --muted-foreground: oklch(0.65 0 0);
+  --accent: oklch(0.2 0.01 280);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
+  --chart-1: oklch(0.75 0.18 160);
+  --chart-2: oklch(0.7 0.15 200);
+  --chart-3: oklch(0.65 0.2 280);
+  --chart-4: oklch(0.7 0.15 50);
+  --chart-5: oklch(0.65 0.18 350);
+  --sidebar: oklch(0.09 0.005 285);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent: oklch(0.18 0.01 280);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 6%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Premium Design Tokens */
+  --glass-bg: oklch(0.14 0.008 280 / 60%);
+  --glass-border: oklch(1 0 0 / 8%);
+  --glass-shadow: 0 8px 32px oklch(0 0 0 / 40%);
+  --glass-glow-emerald: 0 0 30px oklch(0.72 0.19 160 / 12%);
+  --glass-glow-cyan: 0 0 30px oklch(0.72 0.15 200 / 12%);
+  --glass-glow-purple: 0 0 30px oklch(0.65 0.2 280 / 12%);
+  --glass-glow-amber: 0 0 30px oklch(0.7 0.15 70 / 12%);
+
+  --surface-0: oklch(0.065 0.005 285);
+  --surface-1: oklch(0.098 0.005 285);
+  --surface-2: oklch(0.135 0.005 285);
+  --surface-3: oklch(0.17 0.008 280);
+  --surface-4: oklch(0.2 0.01 280);
 }
 
 @layer base {
@@ -130,41 +145,349 @@
   }
 }
 
-/* React Flow customizations */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM SCROLLBAR
+   ═══════════════════════════════════════════════════════════════════════════ */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(1 0 0 / 8%);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(1 0 0 / 15%);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLASSMORPHISM UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+}
+
+.glass-card {
+  background: oklch(0.12 0.008 280 / 50%);
+  border: 1px solid oklch(1 0 0 / 6%);
+  backdrop-filter: blur(24px) saturate(1.5);
+  -webkit-backdrop-filter: blur(24px) saturate(1.5);
+  box-shadow: 
+    0 0 0 1px oklch(1 0 0 / 3%),
+    0 4px 24px oklch(0 0 0 / 30%),
+    inset 0 1px 0 oklch(1 0 0 / 4%);
+}
+
+.glass-card:hover {
+  border-color: oklch(1 0 0 / 10%);
+  box-shadow: 
+    0 0 0 1px oklch(1 0 0 / 5%),
+    0 8px 32px oklch(0 0 0 / 40%),
+    inset 0 1px 0 oklch(1 0 0 / 6%);
+}
+
+.glass-subtle {
+  background: oklch(0.11 0.005 280 / 40%);
+  border: 1px solid oklch(1 0 0 / 5%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GRADIENT UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.gradient-text {
+  background: linear-gradient(135deg, #fff 0%, oklch(0.85 0 0) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-emerald {
+  background: linear-gradient(135deg, #34d399, #06b6d4, #a78bfa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-border {
+  position: relative;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, oklch(0.72 0.19 160 / 30%), oklch(0.72 0.15 200 / 20%), oklch(0.65 0.2 280 / 15%));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  33% { transform: translateY(-8px) rotate(1deg); }
+  66% { transform: translateY(4px) rotate(-1deg); }
+}
+
+@keyframes gradient-shift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.15); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.1); }
+  56% { transform: scale(1); }
+}
+
+@keyframes data-flow {
+  0% { stroke-dashoffset: 20; opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: 0.3; }
+}
+
+@keyframes particle-drift {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  20% { opacity: 0.6; }
+  80% { opacity: 0.6; }
+  100% { transform: translate(var(--drift-x, 50px), var(--drift-y, -80px)) scale(0.3); opacity: 0; }
+}
+
+@keyframes glow-ring {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(0.72 0.19 160 / 40%); }
+  50% { box-shadow: 0 0 0 8px oklch(0.72 0.19 160 / 0%); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes slide-up-fade {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes border-glow {
+  0%, 100% { border-color: oklch(0.72 0.19 160 / 20%); }
+  50% { border-color: oklch(0.72 0.19 160 / 40%); }
+}
+
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes terminal-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes ripple {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+@keyframes mesh-gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  25% {
+    background-position: 100% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+  75% {
+    background-position: 0% 100%;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATION UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    oklch(1 0 0 / 0%) 0%,
+    oklch(1 0 0 / 4%) 40%,
+    oklch(1 0 0 / 8%) 50%,
+    oklch(1 0 0 / 4%) 60%,
+    oklch(1 0 0 / 0%) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-gradient-shift {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+.animate-heartbeat {
+  animation: heartbeat 1.8s ease-in-out infinite;
+}
+
+.animate-glow-ring {
+  animation: glow-ring 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up-fade 0.4s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-border-glow {
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+.animate-terminal-blink {
+  animation: terminal-blink 1s step-end infinite;
+}
+
+.animate-mesh-gradient {
+  background-size: 400% 400%;
+  animation: mesh-gradient 15s ease infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON SHIMMER
+   ═══════════════════════════════════════════════════════════════════════════ */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: oklch(1 0 0 / 4%);
+  border-radius: 8px;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(1 0 0 / 5%) 40%,
+    oklch(1 0 0 / 10%) 50%,
+    oklch(1 0 0 / 5%) 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   REACT FLOW CUSTOMIZATIONS (Enhanced)
+   ═══════════════════════════════════════════════════════════════════════════ */
 .react-flow__pane {
-  background-color: #09090b;
+  background-color: var(--surface-0);
 }
 .react-flow__edge-path {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: oklch(1 0 0 / 8%);
   stroke-width: 2px;
+  transition: stroke 0.3s ease;
 }
 .react-flow__edge-path.active {
   stroke: #10b981;
   stroke-dasharray: 5;
   animation: dash 1s linear infinite;
+  filter: drop-shadow(0 0 4px oklch(0.72 0.19 160 / 40%));
 }
 .react-flow__controls {
-  background-color: #111113 !important;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  box-shadow: none !important;
+  background-color: oklch(0.12 0.008 280 / 80%) !important;
+  border: 1px solid oklch(1 0 0 / 8%) !important;
+  box-shadow: 0 4px 16px oklch(0 0 0 / 30%) !important;
+  backdrop-filter: blur(12px) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
 }
 .react-flow__controls-button {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  color: rgba(255, 255, 255, 0.5) !important;
+  border-bottom: 1px solid oklch(1 0 0 / 6%) !important;
+  color: oklch(1 0 0 / 50%) !important;
   fill: currentColor !important;
+  transition: all 0.15s ease !important;
 }
 .react-flow__controls-button:hover {
-  background-color: rgba(255, 255, 255, 0.04) !important;
+  background-color: oklch(1 0 0 / 6%) !important;
+  color: oklch(1 0 0 / 80%) !important;
 }
 .react-flow__attribution {
   background-color: transparent !important;
-  color: rgba(255, 255, 255, 0.1) !important;
+  color: oklch(1 0 0 / 8%) !important;
 }
 @keyframes dash {
-  from {
-    stroke-dashoffset: 10;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
+  from { stroke-dashoffset: 10; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ENHANCED SELECTION
+   ═══════════════════════════════════════════════════════════════════════════ */
+::selection {
+  background: oklch(0.72 0.19 160 / 25%);
+  color: #fff;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM FOCUS RINGS
+   ═══════════════════════════════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid oklch(0.72 0.19 160 / 50%);
+  outline-offset: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SONNER TOAST ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-sonner-toaster] [data-sonner-toast] {
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid oklch(1 0 0 / 8%) !important;
 }
