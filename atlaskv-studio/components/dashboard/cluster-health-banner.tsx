@@ -43,24 +43,18 @@ export function ClusterHealthBanner({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] as const }}
       className={cn(
-        'relative overflow-hidden rounded-xl border p-6',
-        'backdrop-blur-xl',
+        'relative overflow-hidden rounded-2xl border p-5',
+        'backdrop-blur-xl bg-[var(--surface-1)]',
         healthy
-          ? 'border-emerald-500/15 bg-gradient-to-br from-emerald-500/[0.06] via-[oklch(0.12_0.008_280/50%)] to-cyan-500/[0.03]'
-          : 'border-rose-500/15 bg-gradient-to-br from-rose-500/[0.06] via-[oklch(0.12_0.008_280/50%)] to-transparent'
+          ? 'border-emerald-500/20 shadow-sm'
+          : 'border-rose-500/20 shadow-sm'
       )}
     >
       {/* Animated gradient glow */}
       <div
         className={cn(
           'absolute -top-20 -right-20 h-40 w-40 rounded-full blur-3xl',
-          healthy ? 'bg-emerald-500/15 animate-pulse-glow' : 'bg-rose-500/15 animate-pulse-glow'
-        )}
-      />
-      <div
-        className={cn(
-          'absolute -bottom-16 -left-16 h-32 w-32 rounded-full blur-3xl',
-          healthy ? 'bg-cyan-500/10' : 'bg-rose-400/8'
+          healthy ? 'bg-emerald-500/10 animate-pulse-glow' : 'bg-rose-500/10 animate-pulse-glow'
         )}
       />
 
@@ -68,7 +62,7 @@ export function ClusterHealthBanner({
         <div className="flex items-center gap-4">
           <div
             className={cn(
-              'relative flex h-12 w-12 items-center justify-center rounded-xl',
+              'relative flex h-11 w-11 items-center justify-center rounded-xl',
               healthy
                 ? 'bg-emerald-500/10 shadow-lg shadow-emerald-500/10'
                 : 'bg-rose-500/10 shadow-lg shadow-rose-500/10'
@@ -79,33 +73,29 @@ export function ClusterHealthBanner({
             ) : (
               <HeartOff className="h-5 w-5 text-rose-400" strokeWidth={1.8} />
             )}
-            {/* Pulse ring */}
-            {healthy && (
-              <span className="absolute inset-0 rounded-xl animate-glow-ring" />
-            )}
           </div>
           <div>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-base font-semibold text-white/90">
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
                 {healthy ? 'Cluster Healthy' : 'Cluster Unreachable'}
               </h2>
               <span
                 className={cn(
                   'inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider border',
                   healthy
-                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                    : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                    ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20'
+                    : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20'
                 )}
               >
                 {nodeState}
               </span>
             </div>
-            <p className="mt-0.5 text-[13px] text-[oklch(1_0_0/30%)]">
-              Node <span className="font-mono text-[oklch(1_0_0/45%)]">{nodeId}</span>
+            <p className="mt-0.5 text-[12px] text-neutral-400 font-mono">
+              Node <span className="font-mono text-[var(--foreground)] font-bold">{nodeId}</span>
               {leader && (
                 <>
                   {' · Leader '}
-                  <span className="font-mono text-[oklch(1_0_0/45%)]">{leader}</span>
+                  <span className="font-mono text-emerald-500 dark:text-emerald-400 font-bold">{leader}</span>
                 </>
               )}
             </p>

@@ -1,20 +1,25 @@
 import type { Metadata } from 'next';
-import { Inter, Geist_Mono } from 'next/font/google';
+import { Space_Grotesk, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 
 import { QueryProvider } from '@/components/providers/query-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from 'sonner';
 
-const inter = Inter({
+import { ThemeProvider } from '@/components/providers/theme-provider';
+
+const spaceGrotesk = Space_Grotesk({
   variable: '--font-sans',
   subsets: ['latin'],
   display: 'swap',
+  weight: ['300', '400', '500', '600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const jetbrainsMono = JetBrains_Mono({
+  variable: '--font-mono',
   subsets: ['latin'],
+  display: 'swap',
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
@@ -31,14 +36,24 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} dark h-full antialiased`}
+      className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full bg-[var(--surface-0)] text-white">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="min-h-full bg-[var(--surface-0)] text-[var(--foreground)] transition-colors duration-300">
         <QueryProvider>
-          <TooltipProvider>
-            {children}
-            <Toaster position="top-right" theme="dark" richColors closeButton />
-          </TooltipProvider>
+          <ThemeProvider>
+            <TooltipProvider>
+              {children}
+              <Toaster position="top-right" theme="dark" richColors closeButton />
+            </TooltipProvider>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

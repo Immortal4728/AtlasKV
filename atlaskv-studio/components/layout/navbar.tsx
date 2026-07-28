@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +8,7 @@ import { useClusterStatus } from '@/hooks/use-cluster';
 import { useSidebar } from './sidebar-context';
 import { Search, Wifi, WifiOff, Menu, Bell } from 'lucide-react';
 import { CommandPalette } from './command-palette';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { motion } from 'framer-motion';
 
 const pageTitles: Record<string, string> = {
@@ -71,7 +73,9 @@ export function Navbar() {
           </button>
 
           <div className="flex items-center gap-2 text-[13px]">
-            <span className="text-[oklch(1_0_0/25%)] font-medium hidden sm:inline">AtlasKV</span>
+            <Link href="/" className="text-neutral-400 hover:text-emerald-500 dark:hover:text-emerald-400 font-semibold tracking-tight transition-colors hidden sm:inline">
+              AtlasKV
+            </Link>
             <span className="text-[oklch(1_0_0/15%)] hidden sm:inline">/</span>
             <motion.span
               key={pageTitle}
@@ -110,6 +114,9 @@ export function Navbar() {
             <span className="text-[10px] text-[oklch(1_0_0/25%)] uppercase tracking-wider font-mono">Leader</span>
             <span className="text-[11px] font-mono text-emerald-400/80 font-medium">{leader}</span>
           </div>
+
+          {/* Theme Switcher Toggle */}
+          <ThemeToggle />
 
           {/* Connection Status */}
           <div

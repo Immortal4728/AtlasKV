@@ -97,11 +97,10 @@ export function StatCard({
       transition={{ duration: 0.4, ease: [0.25, 0.46, 0.45, 0.94] as const, delay: delay * 0.05 }}
       whileHover={{ y: -3, transition: { duration: 0.2 } }}
       className={cn(
-        'group relative rounded-xl overflow-hidden',
-        'bg-[oklch(0.12_0.008_280/50%)]',
-        'border border-[oklch(1_0_0/5%)]',
-        'backdrop-blur-xl',
-        'shadow-[0_2px_16px_oklch(0_0_0/20%),inset_0_1px_0_oklch(1_0_0/4%)]',
+        'group relative rounded-2xl overflow-hidden',
+        'bg-[var(--surface-1)]',
+        'border border-[oklch(1_0_0/8%)] dark:border-[oklch(1_0_0/8%)]',
+        'backdrop-blur-xl shadow-sm',
         'p-5 transition-all duration-300',
         accent.borderHover,
         accent.glow
@@ -115,10 +114,10 @@ export function StatCard({
 
       <div className="relative flex items-start justify-between">
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[oklch(1_0_0/28%)]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-400 dark:text-neutral-500">
             {title}
           </p>
-          <p className="text-2xl font-semibold tracking-tight text-white/90">
+          <p className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
             {isNumeric ? (
               <AnimatedCounter value={numericValue} />
             ) : (
@@ -126,7 +125,7 @@ export function StatCard({
             )}
           </p>
           {subtitle && (
-            <p className="text-[10px] text-[oklch(1_0_0/22%)] font-medium">{subtitle}</p>
+            <p className="text-[10px] text-neutral-400 font-medium">{subtitle}</p>
           )}
         </div>
         <div
