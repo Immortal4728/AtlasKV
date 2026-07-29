@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
+import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { useClusterStatus } from '@/hooks/use-cluster';
 import { useSidebar } from './sidebar-context';
@@ -72,17 +73,26 @@ export function Navbar() {
             <Menu className="h-4 w-4" />
           </button>
 
-          <div className="flex items-center gap-2 text-[13px]">
-            <Link href="/" className="text-neutral-400 hover:text-emerald-500 dark:hover:text-emerald-400 font-semibold tracking-tight transition-colors hidden sm:inline">
-              AtlasKV
+          <div className="flex items-center gap-2 text-sm">
+            <Link href="/dashboard" className="flex items-center gap-1.5 text-neutral-700 dark:text-neutral-300 hover:text-amber-600 dark:hover:text-amber-400 font-bold tracking-tight transition-colors hidden sm:inline-flex group">
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-white p-0.5 shadow-sm border border-amber-500/20 group-hover:scale-105 transition-transform overflow-hidden">
+                <Image
+                  src="/atlaskv-logo.png"
+                  alt="AtlasKV Logo"
+                  width={16}
+                  height={16}
+                  className="h-full w-full object-contain"
+                />
+              </span>
+              <span>AtlasKV</span>
             </Link>
-            <span className="text-[oklch(1_0_0/15%)] hidden sm:inline">/</span>
+            <span className="text-neutral-400 dark:text-neutral-600 hidden sm:inline">/</span>
             <motion.span
               key={pageTitle}
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="font-semibold text-[oklch(1_0_0/70%)]"
+              className="font-bold text-neutral-900 dark:text-white"
             >
               {pageTitle}
             </motion.span>
@@ -94,25 +104,25 @@ export function Navbar() {
           {/* Quick Search Button */}
           <button
             onClick={() => setCommandOpen(true)}
-            className="hidden sm:flex items-center gap-2 rounded-lg border border-[oklch(1_0_0/6%)] bg-[oklch(1_0_0/3%)] px-3 py-1.5 text-[oklch(1_0_0/35%)] hover:text-[oklch(1_0_0/60%)] hover:bg-[oklch(1_0_0/5%)] hover:border-[oklch(1_0_0/10%)] transition-all cursor-pointer text-xs"
+            className="hidden sm:flex items-center gap-2 rounded-lg border border-border dark:border-[oklch(1_0_0/8%)] bg-neutral-100/80 dark:bg-[oklch(1_0_0/3%)] px-3 py-1.5 text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-[oklch(1_0_0/5%)] transition-all cursor-pointer text-xs font-medium"
           >
-            <Search className="h-3.5 w-3.5 text-[oklch(1_0_0/25%)]" />
-            <span className="text-xs text-[oklch(1_0_0/30%)]">Search...</span>
-            <kbd className="ml-4 rounded-md border border-[oklch(1_0_0/8%)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-mono text-emerald-400/70">
+            <Search className="h-3.5 w-3.5 text-neutral-500 dark:text-neutral-400" />
+            <span className="text-xs text-neutral-600 dark:text-neutral-400">Search...</span>
+            <kbd className="ml-4 rounded-md border border-border dark:border-[oklch(1_0_0/8%)] bg-white dark:bg-[var(--surface-2)] px-1.5 py-0.5 text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-semibold shadow-xs">
               ⌘K
             </kbd>
           </button>
 
           {/* Term */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[oklch(1_0_0/3%)] border border-[oklch(1_0_0/5%)]">
-            <span className="text-[10px] text-[oklch(1_0_0/25%)] uppercase tracking-wider font-mono">Term</span>
-            <span className="text-[11px] font-mono text-[oklch(1_0_0/60%)] font-medium">{term}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-mono font-bold">Term</span>
+            <span className="text-xs font-mono text-neutral-800 dark:text-neutral-200 font-bold">{term}</span>
           </div>
 
           {/* Leader */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[oklch(1_0_0/3%)] border border-[oklch(1_0_0/5%)]">
-            <span className="text-[10px] text-[oklch(1_0_0/25%)] uppercase tracking-wider font-mono">Leader</span>
-            <span className="text-[11px] font-mono text-emerald-400/80 font-medium">{leader}</span>
+          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
+            <span className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-mono font-bold">Leader</span>
+            <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">{leader}</span>
           </div>
 
           {/* Theme Switcher Toggle */}
@@ -121,10 +131,10 @@ export function Navbar() {
           {/* Connection Status */}
           <div
             className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium font-mono border transition-all',
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold font-mono border transition-all',
               isConnected
-                ? 'bg-emerald-500/8 text-emerald-400 border-emerald-500/15'
-                : 'bg-rose-500/8 text-rose-400 border-rose-500/15'
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
             )}
           >
             <span className="relative">

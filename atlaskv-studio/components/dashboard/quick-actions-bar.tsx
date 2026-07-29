@@ -42,7 +42,7 @@ export function QuickActionsBar({
               router.push('/keys');
               toast.info('Navigated to Key-Value Explorer');
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition-all cursor-pointer shadow-sm"
           >
             <Plus className="h-3.5 w-3.5" />
             Put Key
@@ -53,7 +53,7 @@ export function QuickActionsBar({
               router.push('/leases');
               toast.info('Navigated to Lease Management');
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-cyan-500/12 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition-all cursor-pointer shadow-sm"
           >
             <Clock className="h-3.5 w-3.5" />
             Allocate Lease
@@ -66,7 +66,7 @@ export function QuickActionsBar({
                 description: 'Compacted log entries into snapshot segment at index 45.',
               });
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/12 text-purple-600 dark:text-purple-400 border border-purple-500/30 hover:bg-purple-500/20 transition-all cursor-pointer shadow-sm"
           >
             <Camera className="h-3.5 w-3.5" />
             Trigger Snapshot
@@ -79,7 +79,7 @@ export function QuickActionsBar({
                 description: 'Sent RequestVote RPCs across cluster for Term + 1.',
               });
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/12 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500/20 transition-all cursor-pointer shadow-sm"
           >
             <Vote className="h-3.5 w-3.5" />
             Force Election
@@ -96,7 +96,7 @@ export function QuickActionsBar({
               downloadAnchor.remove();
               toast.success('Exported Telemetry Data');
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium bg-[oklch(1_0_0/5%)] text-[var(--foreground)] border border-[oklch(1_0_0/8%)] hover:bg-[oklch(1_0_0/10%)] transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-neutral-100 dark:bg-[oklch(1_0_0/5%)] text-[var(--foreground)] border border-border dark:border-[oklch(1_0_0/8%)] hover:bg-neutral-200 dark:hover:bg-[oklch(1_0_0/10%)] transition-all cursor-pointer shadow-sm"
           >
             <Download className="h-3.5 w-3.5" />
             Export Data

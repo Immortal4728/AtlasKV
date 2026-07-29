@@ -96,9 +96,9 @@ export function ActivityAndLogs() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-semibold text-[var(--foreground)] truncate">{evt.message}</span>
-                    <span className="text-[10px] font-mono text-neutral-400 shrink-0">{evt.timestamp}</span>
+                    <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 shrink-0 font-medium">{evt.timestamp}</span>
                   </div>
-                  <p className="text-[11px] text-neutral-400 mt-0.5 leading-relaxed">{evt.details}</p>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 leading-relaxed font-medium">{evt.details}</p>
                 </div>
               </div>
             );

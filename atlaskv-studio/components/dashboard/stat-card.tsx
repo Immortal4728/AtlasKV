@@ -114,7 +114,7 @@ export function StatCard({
 
       <div className="relative flex items-start justify-between">
         <div className="space-y-1.5">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-400 dark:text-neutral-500">
+          <p className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-400">
             {title}
           </p>
           <p className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
@@ -125,7 +125,7 @@ export function StatCard({
             )}
           </p>
           {subtitle && (
-            <p className="text-[10px] text-neutral-400 font-medium">{subtitle}</p>
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">{subtitle}</p>
           )}
         </div>
         <div

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useSidebar } from './sidebar-context';
@@ -92,22 +93,28 @@ export function Sidebar() {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
-        {/* Brand Logo - Click to Home */}
+        {/* Brand Logo - Click to Dashboard */}
         <Link
-          href="/"
+          href="/dashboard"
           className="flex h-16 items-center gap-3 px-5 border-b border-[oklch(1_0_0/8%)] hover:bg-[oklch(1_0_0/3%)] transition-colors cursor-pointer group"
-          title="Return to AtlasKV Home"
+          title="AtlasKV Dashboard"
         >
           <div className="relative">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-400 via-teal-500 to-cyan-600 shadow-lg shadow-emerald-500/20 ring-1 ring-white/20 group-hover:scale-105 transition-transform">
-              <Hexagon className="h-4 w-4 text-white" strokeWidth={2.5} />
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/95 p-1 shadow-md shadow-orange-500/10 ring-1 ring-white/30 group-hover:scale-105 transition-transform overflow-hidden">
+              <Image
+                src="/atlaskv-logo.png"
+                alt="AtlasKV Logo"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
+              />
             </div>
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-400 to-cyan-500 blur-lg opacity-20 animate-pulse-glow" />
+            <div className="absolute inset-0 rounded-xl bg-orange-500/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
           </div>
           <div className="flex flex-col">
-            <span className="text-sm font-bold tracking-tight text-[var(--foreground)] flex items-center gap-1.5 font-sans group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
+            <span className="text-sm font-bold tracking-tight text-[var(--foreground)] flex items-center gap-1.5 font-sans group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
               AtlasKV
-              <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 font-mono font-medium">
+              <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono font-medium">
                 v2.0
               </span>
             </span>
@@ -128,13 +135,13 @@ export function Sidebar() {
                   onClick={() => toggleSection(section.id)}
                   className="w-full flex items-center justify-between px-3 mb-1.5 text-left group"
                 >
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-neutral-400 dark:text-neutral-500 group-hover:text-[var(--foreground)] transition-colors">
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-700 dark:text-neutral-400 group-hover:text-[var(--foreground)] transition-colors">
                     {section.label}
                   </span>
                   {isCollapsed ? (
-                    <ChevronRight className="h-3 w-3 text-neutral-400 group-hover:text-[var(--foreground)]" />
+                    <ChevronRight className="h-3.5 w-3.5 text-neutral-500 group-hover:text-[var(--foreground)]" />
                   ) : (
-                    <ChevronDown className="h-3 w-3 text-neutral-400 group-hover:text-[var(--foreground)]" />
+                    <ChevronDown className="h-3.5 w-3.5 text-neutral-500 group-hover:text-[var(--foreground)]" />
                   )}
                 </button>
 
@@ -152,17 +159,17 @@ export function Sidebar() {
                           href={item.href}
                           onClick={() => setIsOpen(false)}
                           className={cn(
-                            'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-200',
+                            'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-200',
                             isActive
-                              ? 'text-emerald-500 dark:text-white font-semibold'
-                              : 'text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white'
+                              ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                              : 'text-neutral-700 dark:text-neutral-300 hover:text-neutral-900 dark:hover:text-white font-medium'
                           )}
                         >
                           {/* Active indicator pill */}
                           {isActive && (
                             <motion.div
                               layoutId="sidebar-active"
-                              className="absolute inset-0 rounded-lg bg-emerald-500/10 dark:bg-gradient-to-r dark:from-emerald-500/12 dark:via-emerald-500/8 dark:to-transparent border border-emerald-500/20"
+                              className="absolute inset-0 rounded-lg bg-emerald-500/12 dark:bg-gradient-to-r dark:from-emerald-500/15 dark:via-emerald-500/10 dark:to-transparent border border-emerald-500/30"
                               transition={{
                                 type: 'spring',
                                 stiffness: 350,
@@ -173,15 +180,15 @@ export function Sidebar() {
 
                           {/* Hover highlight */}
                           {!isActive && (
-                            <div className="absolute inset-0 rounded-lg bg-[oklch(0_0_0/0%)] hover:bg-[oklch(0_0_0/4%)] dark:hover:bg-[oklch(1_0_0/4%)] transition-colors duration-200" />
+                            <div className="absolute inset-0 rounded-lg bg-neutral-100/50 hover:bg-neutral-100 dark:bg-transparent dark:hover:bg-[oklch(1_0_0/4%)] transition-colors duration-200" />
                           )}
 
                           <item.icon
                             className={cn(
                               'relative h-4 w-4 shrink-0 transition-all duration-200',
                               isActive
-                                ? 'text-emerald-500 dark:text-emerald-400'
-                                : 'text-neutral-400 group-hover:text-neutral-700 dark:text-neutral-500 dark:group-hover:text-neutral-300'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : 'text-neutral-500 group-hover:text-neutral-900 dark:text-neutral-400 dark:group-hover:text-white'
                             )}
                             strokeWidth={1.8}
                           />
@@ -199,16 +206,22 @@ export function Sidebar() {
         {/* Cluster Status Footer */}
         <div className="border-t border-[oklch(1_0_0/8%)] p-3.5">
           <Link
-            href="/"
+            href="/dashboard"
             className="block rounded-xl p-3 space-y-2.5 bg-[var(--surface-1)] border border-[oklch(1_0_0/6%)] hover:border-emerald-500/30 transition-all group"
-            title="AtlasKV Raft Cluster v2.0 - Click to Home"
+            title="AtlasKV Raft Cluster v2.0 - Dashboard"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 group-hover:scale-110 transition-transform">
-                  <Hexagon className="h-3.5 w-3.5" strokeWidth={2.5} />
+                <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-white/95 p-0.5 shadow-sm border border-amber-500/20 group-hover:scale-110 transition-transform overflow-hidden">
+                  <Image
+                    src="/atlaskv-logo.png"
+                    alt="AtlasKV Logo"
+                    width={20}
+                    height={20}
+                    className="h-full w-full object-contain"
+                  />
                 </div>
-                <span className="text-[11px] font-semibold text-[var(--foreground)] group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">
+                <span className="text-[11px] font-semibold text-[var(--foreground)] group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
                   Cluster Online
                 </span>
               </div>

@@ -41,11 +41,11 @@ export function PageHeader({
             </div>
           )}
           <div>
-            <h1 className="text-lg font-semibold tracking-tight gradient-text flex items-center gap-2.5">
+            <h1 className="text-xl font-bold tracking-tight gradient-text flex items-center gap-2.5">
               {title}
               {badge}
             </h1>
-            <p className="text-xs text-[oklch(1_0_0/35%)] mt-0.5 max-w-lg">
+            <p className="text-sm text-neutral-600 dark:text-neutral-400 mt-0.5 max-w-lg font-medium">
               {description}
             </p>
           </div>

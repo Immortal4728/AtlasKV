@@ -188,9 +188,11 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
         return p.progress < 1;
       });
 
+      const isDark = document.documentElement.classList.contains('dark');
+
       // Draw connections (thin lines between nodes)
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.15)';
+      ctx.lineWidth = 1.5;
       for (let i = 0; i < nodes.length; i++) {
         for (let j = i + 1; j < nodes.length; j++) {
           ctx.beginPath();
@@ -260,55 +262,60 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
         ctx.beginPath();
         ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
         if (isLeader) {
-          ctx.fillStyle = 'rgba(20, 224, 197, 0.12)';
-          ctx.strokeStyle = 'rgba(20, 224, 197, 0.5)';
+          ctx.fillStyle = isDark ? 'rgba(20, 224, 197, 0.15)' : 'rgba(20, 224, 197, 0.20)';
+          ctx.strokeStyle = isDark ? 'rgba(20, 224, 197, 0.6)' : 'rgba(16, 185, 129, 0.8)';
         } else if (isCandidate) {
-          ctx.fillStyle = 'rgba(183, 148, 244, 0.12)';
-          ctx.strokeStyle = 'rgba(183, 148, 244, 0.5)';
+          ctx.fillStyle = isDark ? 'rgba(183, 148, 244, 0.15)' : 'rgba(183, 148, 244, 0.20)';
+          ctx.strokeStyle = isDark ? 'rgba(183, 148, 244, 0.6)' : 'rgba(147, 51, 234, 0.8)';
         } else {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+          ctx.fillStyle = isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)';
+          ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(0, 0, 0, 0.25)';
         }
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1.5;
         ctx.fill();
         ctx.stroke();
 
         // Role label
-        ctx.fillStyle = isLeader ? 'rgba(20, 224, 197, 0.9)' : isCandidate ? 'rgba(183, 148, 244, 0.9)' : 'rgba(255, 255, 255, 0.45)';
-        ctx.font = '500 9px "Space Grotesk", system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = isLeader
+          ? (isDark ? '#2dd4bf' : '#047857')
+          : isCandidate
+          ? (isDark ? '#c084fc' : '#7e22ce')
+          : (isDark ? '#94a3b8' : '#475569');
+        ctx.font = '600 10px "Space Grotesk", system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(node.role.toUpperCase(), node.x, node.y - 5);
+        ctx.fillText(node.role.toUpperCase(), node.x, node.y - 6);
 
         // Node ID
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        ctx.font = '600 11px "Space Grotesk", system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
+        ctx.font = '700 12px "Space Grotesk", system-ui, -apple-system, sans-serif';
         ctx.fillText(node.label, node.x, node.y + 8);
 
         // Stats below node
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
-        ctx.font = '400 8px "SF Mono", "Geist Mono", monospace';
-        ctx.fillText(`T:${node.term} CI:${node.commitIndex} L:${node.logLength}`, node.x, node.y + nodeRadius + 14);
+        ctx.fillStyle = isDark ? '#94a3b8' : '#475569';
+        ctx.font = '600 10px "SF Mono", "Geist Mono", monospace';
+        ctx.fillText(`T:${node.term} CI:${node.commitIndex} L:${node.logLength}`, node.x, node.y + nodeRadius + 15);
       });
 
       // Phase indicator
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.font = '500 9px "Space Grotesk", system-ui, -apple-system, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-
       const phaseLabel = phase === 'election' ? 'LEADER ELECTION' : phase === 'replication' ? 'LOG REPLICATION' : 'HEARTBEAT';
-      const phaseColor = phase === 'election' ? 'rgba(183, 148, 244, 0.6)' : phase === 'replication' ? 'rgba(99, 179, 237, 0.6)' : 'rgba(20, 224, 197, 0.4)';
+      const phaseColor = phase === 'election'
+        ? (isDark ? '#c084fc' : '#7e22ce')
+        : phase === 'replication'
+        ? (isDark ? '#60a5fa' : '#2563eb')
+        : (isDark ? '#2dd4bf' : '#047857');
 
       // Status dot
       ctx.beginPath();
-      ctx.arc(16, 18, 3, 0, Math.PI * 2);
+      ctx.arc(16, 18, 4, 0, Math.PI * 2);
       ctx.fillStyle = phaseColor;
       ctx.fill();
 
       ctx.fillStyle = phaseColor;
-      ctx.font = '500 8px "Space Grotesk", system-ui, -apple-system, sans-serif';
-      ctx.fillText(phaseLabel, 24, 14);
+      ctx.font = '600 11px "Space Grotesk", system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(phaseLabel, 26, 13);
 
       animRef.current = requestAnimationFrame(render);
     };

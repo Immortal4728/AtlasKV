@@ -1,5 +1,7 @@
 'use client';
 
+import { InteractiveClusterViz } from '@/components/cluster/interactive-cluster-viz';
+
 import { useClusterStatus, useMembers } from '@/hooks/use-cluster';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -66,65 +68,8 @@ export default function ClusterPage() {
         }
       />
 
-      {/* Cluster Topology Diagram */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="glass-card rounded-xl p-6 overflow-hidden relative"
-      >
-        {/* Ambient glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[300px] h-[200px] bg-emerald-500/5 blur-[80px] pointer-events-none" />
-
-        <div className="relative flex items-center justify-center py-8">
-          <svg width="480" height="180" viewBox="0 0 480 180" className="opacity-80">
-            {/* Connection lines with animated data flow */}
-            <line x1="240" y1="30" x2="80" y2="150" stroke="oklch(1 0 0 / 8%)" strokeWidth="2" />
-            <line x1="240" y1="30" x2="400" y2="150" stroke="oklch(1 0 0 / 8%)" strokeWidth="2" />
-            <line x1="80" y1="150" x2="400" y2="150" stroke="oklch(1 0 0 / 6%)" strokeWidth="1.5" strokeDasharray="4 4" />
-
-            {/* Animated data packets on lines */}
-            <circle r="3" fill="#10b981" opacity="0.8">
-              <animateMotion dur="2s" repeatCount="indefinite" path="M240,30 L80,150" />
-            </circle>
-            <circle r="3" fill="#10b981" opacity="0.8">
-              <animateMotion dur="2.5s" repeatCount="indefinite" path="M240,30 L400,150" />
-            </circle>
-            <circle r="2" fill="#06b6d4" opacity="0.6">
-              <animateMotion dur="3s" repeatCount="indefinite" path="M80,150 L400,150" />
-            </circle>
-
-            {/* Leader node (top center) */}
-            <g>
-              <circle cx="240" cy="30" r="16" fill="oklch(0.72 0.19 160 / 15%)" stroke="oklch(0.72 0.19 160 / 40%)" strokeWidth="2">
-                <animate attributeName="r" values="16;18;16" dur="2s" repeatCount="indefinite" />
-              </circle>
-              <circle cx="240" cy="30" r="6" fill="#10b981">
-                <animate attributeName="opacity" values="0.6;1;0.6" dur="1.5s" repeatCount="indefinite" />
-              </circle>
-              <text x="240" y="56" fill="oklch(1 0 0 / 50%)" fontSize="10" textAnchor="middle" fontFamily="monospace">node3 (Leader)</text>
-            </g>
-
-            {/* Follower 1 (bottom left) */}
-            <g>
-              <circle cx="80" cy="150" r="12" fill="oklch(0.6 0.2 250 / 10%)" stroke="oklch(0.6 0.2 250 / 30%)" strokeWidth="1.5" />
-              <circle cx="80" cy="150" r="4" fill="#3b82f6" />
-              <text x="80" y="174" fill="oklch(1 0 0 / 40%)" fontSize="10" textAnchor="middle" fontFamily="monospace">node1</text>
-            </g>
-
-            {/* Follower 2 (bottom right) */}
-            <g>
-              <circle cx="400" cy="150" r="12" fill="oklch(0.6 0.2 250 / 10%)" stroke="oklch(0.6 0.2 250 / 30%)" strokeWidth="1.5" />
-              <circle cx="400" cy="150" r="4" fill="#3b82f6" />
-              <text x="400" y="174" fill="oklch(1 0 0 / 40%)" fontSize="10" textAnchor="middle" fontFamily="monospace">node2</text>
-            </g>
-          </svg>
-        </div>
-
-        <div className="text-center text-[10px] text-[oklch(1_0_0/25%)] font-mono">
-          Raft Consensus Topology · 3-Node Quorum · Term {status?.currentTerm ?? 47}
-        </div>
-      </motion.div>
+      {/* Interactive Cluster Topology Visualization */}
+      <InteractiveClusterViz />
 
       {/* Node Grid */}
       <motion.div
@@ -144,8 +89,8 @@ export default function ClusterPage() {
               className={cn(
                 'relative overflow-hidden rounded-xl border backdrop-blur-xl p-5 transition-all duration-300',
                 isLeader
-                  ? 'bg-emerald-500/[0.04] border-emerald-500/20 shadow-[0_0_30px_oklch(0.72_0.19_160/6%)]'
-                  : 'bg-[oklch(0.12_0.008_280/50%)] border-[oklch(1_0_0/6%)] hover:border-[oklch(1_0_0/10%)]'
+                  ? 'bg-emerald-500/[0.08] border-emerald-500/30 shadow-md'
+                  : 'bg-[var(--surface-1)] border-border dark:border-[oklch(1_0_0/8%)] hover:border-emerald-500/30 shadow-sm'
               )}
             >
               {/* Leader glow */}
@@ -154,14 +99,14 @@ export default function ClusterPage() {
               )}
 
               {/* Node Card Header */}
-              <div className="relative flex items-center justify-between border-b border-[oklch(1_0_0/6%)] pb-4">
+              <div className="relative flex items-center justify-between border-b border-border dark:border-[oklch(1_0_0/6%)] pb-4">
                 <div className="flex items-center gap-2.5">
                   <div
                     className={cn(
                       'relative h-10 w-10 rounded-xl flex items-center justify-center border',
                       isLeader
-                        ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400'
-                        : 'bg-[oklch(1_0_0/4%)] border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/40%)]'
+                        ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-neutral-100 dark:bg-[oklch(1_0_0/4%)] border-border dark:border-[oklch(1_0_0/8%)] text-neutral-600 dark:text-neutral-400'
                     )}
                   >
                     {isLeader ? <Crown className="h-4.5 w-4.5" /> : <Server className="h-4.5 w-4.5" />}
@@ -171,8 +116,8 @@ export default function ClusterPage() {
                     )}
                   </div>
                   <div>
-                    <h2 className="text-sm font-bold text-white font-mono">{node.id}</h2>
-                    <p className="text-[10px] text-[oklch(1_0_0/30%)] font-mono">
+                    <h2 className="text-sm font-bold text-[var(--foreground)] font-mono">{node.id}</h2>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 font-mono font-medium">
                       {node.host}:{node.port}
                     </p>
                   </div>
@@ -180,10 +125,10 @@ export default function ClusterPage() {
 
                 <span
                   className={cn(
-                    'px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border',
+                    'px-2 py-0.5 rounded-md text-xs font-mono font-semibold border',
                     isLeader
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-[oklch(1_0_0/4%)] text-[oklch(1_0_0/45%)] border-[oklch(1_0_0/8%)]'
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-neutral-100 dark:bg-[oklch(1_0_0/4%)] text-neutral-600 dark:text-neutral-400 border-border dark:border-[oklch(1_0_0/8%)]'
                   )}
                 >
                   {node.role}
@@ -192,47 +137,47 @@ export default function ClusterPage() {
 
               {/* Node Card Body */}
               <div className="relative py-4 space-y-2.5 font-mono text-xs">
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Health Status</span>
-                  <span className="text-emerald-400 flex items-center gap-1.5 font-semibold">
+                  <span className="text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 font-semibold">
                     <Heart className="h-3 w-3 animate-heartbeat" />
                     Healthy
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Current Term</span>
-                  <span className="text-[oklch(1_0_0/70%)] font-semibold">{node.term}</span>
+                  <span className="text-[var(--foreground)] font-bold">{node.term}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Commit Index</span>
-                  <span className="text-emerald-400 font-semibold">{node.commitIndex.toLocaleString()}</span>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">{node.commitIndex.toLocaleString()}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Applied Index</span>
-                  <span className="text-purple-400 font-semibold">{node.appliedIndex.toLocaleString()}</span>
+                  <span className="text-purple-600 dark:text-purple-400 font-bold">{node.appliedIndex.toLocaleString()}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>gRPC Port</span>
-                  <span className="text-[oklch(1_0_0/50%)]">{node.grpcPort}</span>
+                  <span className="text-[var(--foreground)] font-semibold">{node.grpcPort}</span>
                 </div>
 
-                <div className="flex items-center justify-between text-[oklch(1_0_0/35%)]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Replication Latency</span>
-                  <span className="text-cyan-400">{node.latencyMs}ms</span>
+                  <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{node.latencyMs}ms</span>
                 </div>
               </div>
 
               {/* Replication progress bar */}
               <div className="mb-3">
-                <div className="flex items-center justify-between text-[10px] text-[oklch(1_0_0/25%)] mb-1">
+                <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 font-mono font-medium mb-1">
                   <span>Sync Progress</span>
                   <span>100%</span>
                 </div>
-                <div className="h-1 rounded-full bg-[oklch(1_0_0/6%)] overflow-hidden">
+                <div className="h-1.5 rounded-full bg-neutral-200 dark:bg-[oklch(1_0_0/6%)] overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: '100%' }}
@@ -248,10 +193,10 @@ export default function ClusterPage() {
               </div>
 
               {/* Node Card Footer */}
-              <div className="pt-3 border-t border-[oklch(1_0_0/6%)] flex items-center justify-between text-[10px] text-[oklch(1_0_0/25%)] font-mono">
+              <div className="pt-3 border-t border-border dark:border-[oklch(1_0_0/6%)] flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 font-mono font-medium">
                 <span>Peers: {node.peers}</span>
-                <span className="flex items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   RUNNING
                 </span>
               </div>

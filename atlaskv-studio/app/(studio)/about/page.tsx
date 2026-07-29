@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Hexagon } from 'lucide-react';
+import Image from 'next/image';
 
 export default function AboutPage() {
   return (
@@ -10,8 +10,14 @@ export default function AboutPage() {
       animate={{ opacity: 1 }}
       className="flex flex-col items-center justify-center py-20"
     >
-      <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 mb-6 shadow-xl shadow-emerald-500/20">
-        <Hexagon className="h-8 w-8 text-white" strokeWidth={2} />
+      <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/95 p-2 mb-6 shadow-xl shadow-orange-500/20 ring-1 ring-white/30 overflow-hidden">
+        <Image
+          src="/atlaskv-logo.png"
+          alt="AtlasKV Logo"
+          width={64}
+          height={64}
+          className="h-full w-full object-contain"
+        />
       </div>
       <h2 className="text-2xl font-bold tracking-tight text-white/90 mb-2">
         AtlasKV Studio

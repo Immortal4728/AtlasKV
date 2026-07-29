@@ -41,15 +41,15 @@ export function MembersBanner({
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-[oklch(1_0_0/25%)]" strokeWidth={1.8} />
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[oklch(1_0_0/28%)]">
+          <Users className="h-4 w-4 text-neutral-500 dark:text-neutral-400" strokeWidth={1.8} />
+          <h3 className="text-xs font-bold uppercase tracking-[0.12em] text-neutral-600 dark:text-neutral-400">
             Cluster Members
           </h3>
         </div>
         {isJoint && (
           <div className="flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1 border border-amber-500/15">
-            <GitBranch className="h-3 w-3 text-amber-400" />
-            <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">
+            <GitBranch className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+            <span className="text-xs font-semibold text-amber-500 dark:text-amber-400 uppercase tracking-wider">
               Joint Consensus
             </span>
           </div>
@@ -70,16 +70,16 @@ export function MembersBanner({
               className={cn(
                 'relative flex items-center gap-3 rounded-xl border px-4 py-3 transition-all duration-200 cursor-default',
                 isLeader
-                  ? 'border-emerald-500/20 bg-emerald-500/[0.06] shadow-[0_0_16px_oklch(0.72_0.19_160/6%)]'
-                  : 'border-[oklch(1_0_0/6%)] bg-[oklch(1_0_0/2%)] hover:border-[oklch(1_0_0/10%)] hover:bg-[oklch(1_0_0/3%)]'
+                  ? 'border-emerald-500/30 bg-emerald-500/[0.08] shadow-sm'
+                  : 'border-border dark:border-[oklch(1_0_0/6%)] bg-[var(--surface-0)] hover:border-emerald-500/30'
               )}
             >
               <div
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-lg border',
                   isLeader
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                    : 'bg-[oklch(1_0_0/4%)] border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/40%)]'
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-neutral-100 dark:bg-[oklch(1_0_0/4%)] border-border dark:border-[oklch(1_0_0/8%)] text-neutral-600 dark:text-neutral-400'
                 )}
               >
                 {isLeader ? (
@@ -93,14 +93,14 @@ export function MembersBanner({
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      'text-xs font-mono font-medium',
-                      isLeader ? 'text-emerald-400/90' : 'text-[oklch(1_0_0/55%)]'
+                      'text-xs font-mono font-semibold',
+                      isLeader ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-700 dark:text-neutral-300'
                     )}
                   >
                     {member}
                   </span>
                   {isLeader && (
-                    <span className="text-[9px] uppercase tracking-wider text-emerald-400/50 font-semibold bg-emerald-500/8 px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
                       Leader
                     </span>
                   )}
@@ -110,11 +110,11 @@ export function MembersBanner({
                     className={cn(
                       'h-1.5 w-1.5 rounded-full',
                       isLeader
-                        ? 'bg-emerald-400 shadow-[0_0_6px_oklch(0.72_0.19_160/60%)]'
-                        : 'bg-[oklch(1_0_0/20%)]'
+                        ? 'bg-emerald-500 dark:bg-emerald-400 shadow-[0_0_6px_oklch(0.72_0.19_160/60%)]'
+                        : 'bg-neutral-400 dark:bg-[oklch(1_0_0/20%)]'
                     )}
                   />
-                  <span className="text-[10px] text-[oklch(1_0_0/25%)] font-mono">
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono font-medium">
                     {isLeader ? 'Active' : 'Following'}
                   </span>
                 </div>

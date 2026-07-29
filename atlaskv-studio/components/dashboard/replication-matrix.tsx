@@ -109,24 +109,24 @@ export function ReplicationMatrix({
                       {node.role}
                     </span>
                   </div>
-                  <span className="text-[10px] font-mono text-neutral-400">{node.address}</span>
+                  <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 font-medium">{node.address}</span>
                 </div>
               </div>
 
               {/* Middle: Log & Replication Bar */}
               <div className="flex-1 sm:max-w-xs space-y-1">
-                <div className="flex items-center justify-between text-[10px] font-mono text-neutral-400">
+                <div className="flex items-center justify-between text-xs font-mono text-neutral-600 dark:text-neutral-400 font-medium">
                   <span>Log Index: {node.logIndex}</span>
                   <span>Lag: {node.lagMs}ms</span>
                 </div>
-                <div className="h-1.5 w-full rounded-full bg-[oklch(1_0_0/6%)] overflow-hidden">
+                <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-[oklch(1_0_0/6%)] overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       isLeader
-                        ? 'bg-gradient-to-r from-emerald-400 to-teal-400'
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
                         : isSyncing
-                        ? 'bg-gradient-to-r from-amber-400 to-cyan-400'
-                        : 'bg-emerald-400'
+                        ? 'bg-gradient-to-r from-amber-500 to-cyan-400'
+                        : 'bg-emerald-500'
                     }`}
                     style={{ width: isLeader ? '100%' : `${(node.logIndex / commitIndex) * 100}%` }}
                   />
@@ -134,16 +134,16 @@ export function ReplicationMatrix({
               </div>
 
               {/* Right: Heartbeat & Health Badge */}
-              <div className="flex items-center gap-3 text-[11px] font-mono">
-                <span className="text-neutral-400 text-[10px]">{node.lastHeartbeat}</span>
+              <div className="flex items-center gap-3 text-xs font-mono">
+                <span className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">{node.lastHeartbeat}</span>
                 <span
-                  className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${
+                  className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-semibold ${
                     node.health === 'HEALTHY'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                   }`}
                 >
-                  <CheckCircle2 className="h-3 w-3" />
+                  <CheckCircle2 className="h-3.5 w-3.5" />
                   {node.health}
                 </span>
               </div>

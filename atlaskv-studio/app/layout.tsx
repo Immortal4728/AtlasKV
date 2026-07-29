@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   title: 'AtlasKV — Replicated Key-Value Studio',
   description:
     'Enterprise distributed key-value database management console for AtlasKV Raft consensus clusters.',
+  icons: {
+    icon: '/atlaskv-logo.png',
+    shortcut: '/atlaskv-logo.png',
+    apple: '/atlaskv-logo.png',
+  },
 };
 
 export default function RootLayout({
