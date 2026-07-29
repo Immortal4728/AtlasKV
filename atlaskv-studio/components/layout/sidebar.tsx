@@ -20,6 +20,11 @@ import {
   Hexagon,
   ChevronDown,
   ChevronRight,
+  Rocket,
+  Code2,
+  FileCode2,
+  Terminal,
+  BookOpen,
 } from 'lucide-react';
 
 const navSections = [
@@ -38,6 +43,17 @@ const navSections = [
       { name: 'Keys', href: '/keys', icon: KeyRound },
       { name: 'Prefix', href: '/prefix', icon: Filter },
       { name: 'Leases', href: '/leases', icon: Clock },
+    ],
+  },
+  {
+    id: 'developer',
+    label: 'Developer',
+    items: [
+      { name: 'Quick Start', href: '/developer/quickstart', icon: Rocket },
+      { name: 'Java SDK', href: '/developer/java-sdk', icon: Code2 },
+      { name: 'TypeScript SDK', href: '/developer/ts-sdk', icon: FileCode2 },
+      { name: 'CLI', href: '/developer/cli', icon: Terminal },
+      { name: 'API Reference', href: '/developer/api-reference', icon: BookOpen },
     ],
   },
   {

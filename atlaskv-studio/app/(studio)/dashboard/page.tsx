@@ -65,8 +65,8 @@ export default function DashboardPage() {
     <div className="space-y-6 max-w-[1600px] mx-auto">
       {/* Page Header */}
       <PageHeader
-        title="Cluster Telemetry & Control Center"
-        description="Real-time consensus telemetry, Raft cluster topology, and data replication matrices."
+        title="Cluster Overview"
+        description="Cluster overview and health metrics."
         icon={Activity}
         iconColor="text-emerald-400"
         badge={

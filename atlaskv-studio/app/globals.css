@@ -50,51 +50,51 @@
 }
 
 :root {
-  --background: oklch(0.985 0.002 285);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.96 0 0);
-  --muted-foreground: oklch(0.48 0 0);
-  --accent: oklch(0.96 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #F5F7FA;
+  --foreground: #0F172A;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --popover: #FFFFFF;
+  --popover-foreground: #0F172A;
+  --primary: #0F172A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F8FAFC;
+  --secondary-foreground: #0F172A;
+  --muted: #F1F5F9;
+  --muted-foreground: #475569;
+  --accent: #F1F5F9;
+  --accent-foreground: #0F172A;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.90 0 0);
-  --input: oklch(0.90 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.65 0.18 160);
-  --chart-2: oklch(0.6 0.15 200);
-  --chart-3: oklch(0.55 0.2 280);
-  --chart-4: oklch(0.6 0.15 50);
-  --chart-5: oklch(0.55 0.18 350);
+  --border: #DCE3EB;
+  --input: #EEF2F7;
+  --ring: #10B981;
+  --chart-1: #10B981;
+  --chart-2: #06B6D4;
+  --chart-3: #8B5CF6;
+  --chart-4: #F59E0B;
+  --chart-5: #EC4899;
   --radius: 0.625rem;
-  --sidebar: oklch(0.98 0.002 285);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.95 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.90 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #0F172A;
+  --sidebar-primary: #0F172A;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F1F5F9;
+  --sidebar-accent-foreground: #0F172A;
+  --sidebar-border: #DCE3EB;
+  --sidebar-ring: #10B981;
 
-  /* Light Theme Surfaces & Glass */
-  --surface-0: oklch(0.985 0.002 285);
-  --surface-1: oklch(0.965 0.003 285);
-  --surface-2: oklch(0.945 0.004 285);
-  --surface-3: oklch(0.92 0.005 285);
-  --surface-4: oklch(0.89 0.006 285);
+  /* Light Theme Surface Hierarchy */
+  --surface-0: #F5F7FA;
+  --surface-1: #FFFFFF;
+  --surface-2: #F8FAFC;
+  --surface-3: #F1F5F9;
+  --surface-4: #E2E8F0;
 
-  --glass-bg: oklch(1 0 0 / 80%);
-  --glass-border: oklch(0 0 0 / 8%);
-  --glass-shadow: 0 8px 32px oklch(0 0 0 / 6%);
-  --glass-glow-emerald: 0 0 30px oklch(0.65 0.18 160 / 8%);
-  --glass-glow-cyan: 0 0 30px oklch(0.6 0.15 200 / 8%);
+  --glass-bg: rgba(255, 255, 255, 0.95);
+  --glass-border: #DCE3EB;
+  --glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
+  --glass-glow-emerald: 0 0 30px rgba(16, 185, 129, 0.1);
+  --glass-glow-cyan: 0 0 30px rgba(6, 182, 212, 0.1);
 }
 
 .dark {

@@ -34,8 +34,8 @@ export default function HistoryPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Key Revision History & Rollback"
-        description="Inspect append-only version timelines and execute atomic state rollbacks"
+        title="Revision History"
+        description="View key version timeline."
         icon={History}
         iconColor="text-indigo-400"
       />
@@ -49,15 +49,15 @@ export default function HistoryPage() {
           e.preventDefault();
           setActiveKey(searchKey);
         }}
-        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 glass-card rounded-xl p-3"
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 glass-card rounded-xl p-3 border border-border dark:border-[oklch(1_0_0/8%)]"
       >
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[oklch(1_0_0/25%)]" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
           <Input
             placeholder="Enter key to view version timeline..."
             value={searchKey}
             onChange={(e) => setSearchKey(e.target.value)}
-            className="pl-9 bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] placeholder:text-[oklch(1_0_0/25%)] focus-visible:ring-indigo-500/30 rounded-lg"
+            className="pl-9 bg-[var(--input)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-[var(--foreground)] placeholder:text-neutral-400 focus-visible:ring-indigo-500/30 rounded-lg"
           />
         </div>
 
@@ -65,7 +65,7 @@ export default function HistoryPage() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
-              className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-400 hover:to-purple-500 text-white font-semibold text-xs px-4 py-2 shadow-lg shadow-indigo-500/20 gap-1.5 rounded-lg border-0"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 shadow-sm gap-1.5 rounded-lg border-0"
             >
               <Search className="h-4 w-4" />
               View History
@@ -78,7 +78,7 @@ export default function HistoryPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-mono"
+          className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-mono font-bold"
         >
           {rollbackSuccess}
         </motion.div>
@@ -89,31 +89,41 @@ export default function HistoryPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.15 }}
-        className="glass-card rounded-xl p-6 space-y-6"
+        className="glass-card rounded-xl p-6 space-y-6 border border-border dark:border-[oklch(1_0_0/6%)]"
       >
-        <div className="flex items-center justify-between border-b border-[oklch(1_0_0/6%)] pb-4">
+        <div className="flex items-center justify-between border-b border-border dark:border-[oklch(1_0_0/6%)] pb-4">
           <div className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4 text-indigo-400" />
-            <h2 className="text-sm font-semibold text-white font-mono">{activeKey}</h2>
+            <GitBranch className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            <h2 className="text-sm font-bold text-[var(--foreground)] font-mono">{activeKey}</h2>
           </div>
-          <span className="text-xs text-[oklch(1_0_0/35%)] font-mono">Total Revisions: {revisions.length}</span>
+          <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono font-semibold">Total Revisions: {revisions.length}</span>
         </div>
 
         {isLoading ? (
           <div className="space-y-4 font-mono">
             {[1, 2].map((i) => (
-              <div key={i} className="p-4 rounded-xl border border-[oklch(1_0_0/5%)] bg-[var(--surface-0)] space-y-2">
+              <div key={i} className="p-4 rounded-xl border border-border dark:border-[oklch(1_0_0/5%)] bg-[var(--surface-2)] space-y-2">
                 <div className="skeleton h-4 w-32 rounded" />
                 <div className="skeleton h-8 w-full rounded" />
               </div>
             ))}
           </div>
         ) : revisions.length === 0 ? (
-          <div className="py-12 text-center text-[oklch(1_0_0/30%)] text-xs font-mono">
-            No revision history found for key "{activeKey}"
+          <div className="py-16 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <div className="h-14 w-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shadow-xs">
+                <History className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="space-y-1">
+                <h4 className="text-sm font-bold text-[var(--foreground)]">No Revision History Found</h4>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm">
+                  No previous version timeline exists for key "{activeKey}". Search for another key to inspect atomic state rollbacks.
+                </p>
+              </div>
+            </div>
           </div>
         ) : (
-          <div className="relative border-l-2 border-indigo-500/25 ml-4 pl-6 space-y-6">
+          <div className="relative border-l-2 border-indigo-500/30 ml-4 pl-6 space-y-6">
             {revisions.map((rev, idx) => (
               <motion.div
                 key={rev.version}
@@ -123,14 +133,14 @@ export default function HistoryPage() {
                 className="relative group"
               >
                 <div
-                  className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 bg-[var(--surface-0)] transition-colors ${
+                  className={`absolute -left-[31px] top-1 h-3.5 w-3.5 rounded-full border-2 bg-[var(--surface-1)] transition-colors ${
                     idx === 0
-                      ? 'border-indigo-400 bg-indigo-500 shadow-[0_0_8px_oklch(0.65_0.2_280/50%)]'
-                      : 'border-[oklch(1_0_0/20%)] group-hover:border-indigo-400'
+                      ? 'border-indigo-500 bg-indigo-500 shadow-sm'
+                      : 'border-border dark:border-[oklch(1_0_0/20%)] group-hover:border-indigo-500'
                   }`}
                 />
 
-                <div className="p-4 rounded-xl border border-[oklch(1_0_0/6%)] bg-[var(--surface-0)]/70 space-y-2">
+                <div className="p-4 rounded-xl border border-border dark:border-[oklch(1_0_0/6%)] bg-[var(--surface-2)] space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span

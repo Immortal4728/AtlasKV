@@ -64,8 +64,8 @@ export default function LeasesPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Distributed Lease Management"
-        description="Live cluster leases, expiration timers, and keep-alive renewals"
+        title="Leases"
+        description="Manage distributed leases."
         icon={Clock}
         iconColor="text-purple-400"
         actions={
@@ -102,11 +102,11 @@ export default function LeasesPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.1 }}
-        className="glass-card rounded-xl overflow-hidden p-0"
+        className="glass-card rounded-xl overflow-hidden p-0 border border-border dark:border-[oklch(1_0_0/6%)]"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[var(--surface-0)]/60 border-b border-[oklch(1_0_0/6%)] text-[oklch(1_0_0/28%)] uppercase tracking-[0.1em] text-[10px] font-mono">
+            <thead className="bg-[var(--surface-2)] border-b border-border dark:border-[oklch(1_0_0/6%)] text-neutral-700 dark:text-[oklch(1_0_0/50%)] uppercase tracking-[0.1em] text-[10px] font-mono font-bold">
               <tr>
                 <th className="py-3 px-4">Lease ID</th>
                 <th className="py-3 px-4">TTL (Duration)</th>
@@ -115,7 +115,7 @@ export default function LeasesPage() {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[oklch(1_0_0/4%)] text-[oklch(1_0_0/60%)] font-mono">
+            <tbody className="divide-y divide-border dark:divide-[oklch(1_0_0/4%)] text-[var(--foreground)] font-mono">
               {isLoading ? (
                 [1, 2, 3].map((i) => (
                   <tr key={i}>
@@ -130,10 +130,27 @@ export default function LeasesPage() {
                 <tr>
                   <td colSpan={5} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-[oklch(1_0_0/4%)] flex items-center justify-center">
-                        <Clock className="h-6 w-6 text-[oklch(1_0_0/15%)]" />
+                      <div className="h-14 w-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shadow-xs">
+                        <Clock className="h-7 w-7 text-purple-600 dark:text-purple-400" />
                       </div>
-                      <p className="text-[oklch(1_0_0/30%)] text-xs">No active leases in cluster</p>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-[var(--foreground)]">No Active Leases</h4>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm">
+                          Create your first distributed lease to attach automatic expiration TTLs to key-value pairs.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => {
+                          setTtlInput('30s');
+                          setCustomIdInput('');
+                          setErrorMsg(null);
+                          setCreateDialogOpen(true);
+                        }}
+                        className="mt-2 bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm gap-1.5"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Create Lease
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -150,22 +167,22 @@ export default function LeasesPage() {
                       initial={{ opacity: 0, x: -6 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ duration: 0.25, delay: idx * 0.03 }}
-                      className="hover:bg-[oklch(1_0_0/2%)] transition-colors"
+                      className="hover:bg-neutral-100/80 dark:hover:bg-[oklch(1_0_0/2%)] transition-colors"
                     >
-                      <td className="py-3 px-4 font-medium text-purple-400/90 flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5 text-purple-500/40 shrink-0" />
+                      <td className="py-3 px-4 font-bold text-purple-600 dark:text-purple-400 flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-purple-500/60 shrink-0" />
                         {lease.leaseId}
                       </td>
-                      <td className="py-3 px-4 text-[oklch(1_0_0/50%)]">
+                      <td className="py-3 px-4 text-neutral-700 dark:text-[oklch(1_0_0/50%)] font-semibold">
                         {lease.durationMs / 1000}s
                       </td>
                       <td className="py-3 px-4">
                         <span
                           className={cn(
-                            'px-2 py-0.5 rounded-md text-[10px] border font-mono',
+                            'px-2 py-0.5 rounded-md text-[10px] border font-mono font-bold',
                             remainingSec > 10
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                              : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
                           )}
                         >
                           Expires in {remainingSec}s

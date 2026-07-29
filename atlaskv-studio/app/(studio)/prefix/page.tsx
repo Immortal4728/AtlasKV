@@ -31,8 +31,8 @@ export default function PrefixPage() {
     <div className="space-y-6">
       {/* Header */}
       <PageHeader
-        title="Prefix Query Explorer"
-        description="Perform live range scans and prefix queries across the AtlasKV key space"
+        title="Prefix Explorer"
+        description="Query keys by prefix."
         icon={Filter}
         iconColor="text-emerald-400"
       />
@@ -43,15 +43,15 @@ export default function PrefixPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         onSubmit={handleScan}
-        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 glass-card rounded-xl p-3"
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 glass-card rounded-xl p-3 border border-border dark:border-[oklch(1_0_0/8%)]"
       >
         <div className="relative flex-1">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[oklch(1_0_0/25%)]" />
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
           <Input
             placeholder="Enter key prefix (e.g. app/, session/)"
             value={prefixInput}
             onChange={(e) => setPrefixInput(e.target.value)}
-            className="pl-9 bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] placeholder:text-[oklch(1_0_0/25%)] focus-visible:ring-emerald-500/30 rounded-lg"
+            className="pl-9 bg-[var(--input)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-[var(--foreground)] placeholder:text-neutral-400 focus-visible:ring-emerald-500/30 rounded-lg"
           />
         </div>
 
@@ -59,7 +59,7 @@ export default function PrefixPage() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
-              className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-semibold text-xs px-4 py-2 shadow-lg shadow-emerald-500/20 gap-1.5 rounded-lg border-0"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs px-4 py-2 shadow-sm gap-1.5 rounded-lg border-0"
             >
               <Search className="h-4 w-4" />
               Scan Prefix
@@ -75,7 +75,7 @@ export default function PrefixPage() {
         transition={{ delay: 0.1 }}
         className="flex flex-wrap items-center gap-2 text-xs"
       >
-        <span className="text-[oklch(1_0_0/30%)] text-[11px] font-mono">Quick Prefixes:</span>
+        <span className="text-neutral-600 dark:text-neutral-400 text-xs font-mono font-medium">Quick Prefixes:</span>
         {['app/', 'session/', 'cache/', 'leader/'].map((p) => (
           <button
             key={p}
@@ -85,10 +85,10 @@ export default function PrefixPage() {
               setOffset(0);
             }}
             className={cn(
-              'px-2.5 py-1 rounded-md text-[11px] font-mono transition-all border',
+              'px-2.5 py-1 rounded-md text-xs font-mono transition-all border font-semibold',
               activePrefix === p
-                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20 shadow-sm'
-                : 'bg-[var(--surface-0)] text-[oklch(1_0_0/40%)] border-[oklch(1_0_0/8%)] hover:text-white hover:border-[oklch(1_0_0/15%)]'
+                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs'
+                : 'bg-[var(--surface-3)] text-neutral-700 dark:text-[oklch(1_0_0/40%)] border-border dark:border-[oklch(1_0_0/8%)] hover:text-[var(--foreground)] hover:bg-neutral-200/60 dark:hover:bg-[oklch(1_0_0/4%)]'
             )}
           >
             {p}
@@ -101,11 +101,11 @@ export default function PrefixPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, delay: 0.15 }}
-        className="glass-card rounded-xl overflow-hidden p-0"
+        className="glass-card rounded-xl overflow-hidden p-0 border border-border dark:border-[oklch(1_0_0/6%)]"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[var(--surface-0)]/60 border-b border-[oklch(1_0_0/6%)] text-[oklch(1_0_0/28%)] uppercase tracking-[0.1em] text-[10px] font-mono">
+            <thead className="bg-[var(--surface-2)] border-b border-border dark:border-[oklch(1_0_0/6%)] text-neutral-700 dark:text-[oklch(1_0_0/50%)] uppercase tracking-[0.1em] text-[10px] font-mono font-bold">
               <tr>
                 <th className="py-3 px-4">Matching Key</th>
                 <th className="py-3 px-4">Value</th>
@@ -113,7 +113,7 @@ export default function PrefixPage() {
                 <th className="py-3 px-4">Lease</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[oklch(1_0_0/4%)] text-[oklch(1_0_0/60%)] font-mono">
+            <tbody className="divide-y divide-border dark:divide-[oklch(1_0_0/4%)] text-[var(--foreground)] font-mono">
               {isLoading ? (
                 [1, 2, 3].map((i) => (
                   <tr key={i}>
@@ -127,10 +127,15 @@ export default function PrefixPage() {
                 <tr>
                   <td colSpan={4} className="py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-[oklch(1_0_0/4%)] flex items-center justify-center">
-                        <Database className="h-6 w-6 text-[oklch(1_0_0/15%)]" />
+                      <div className="h-14 w-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shadow-xs">
+                        <Filter className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <p className="text-[oklch(1_0_0/30%)] text-xs">No keys match prefix "{activePrefix}"</p>
+                      <div className="space-y-1">
+                        <h4 className="text-sm font-bold text-[var(--foreground)]">No Matching Prefix Keys</h4>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm">
+                          No key-value entries matched prefix "{activePrefix}". Try scanning with a different prefix like "app/" or "session/".
+                        </p>
+                      </div>
                     </div>
                   </td>
                 </tr>

@@ -386,13 +386,10 @@ export function InteractiveClusterViz() {
           </div>
           <div>
             <h3 className="text-sm font-bold tracking-tight text-[var(--foreground)] flex items-center gap-2 font-mono">
-              Live Raft Consensus Topology Mesh
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                60 FPS Live
-              </span>
+              Cluster Topology Mesh
             </h3>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
-              Real-time leader election pulses, heartbeat trajectories, and quorum log replication
+              Node status and RPC packet flow.
             </p>
           </div>
         </div>

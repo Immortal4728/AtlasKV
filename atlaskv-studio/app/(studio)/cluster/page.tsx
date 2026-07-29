@@ -53,7 +53,7 @@ export default function ClusterPage() {
       {/* Header */}
       <PageHeader
         title="Cluster Topology"
-        description="Distributed consensus node status, quorum health, terms, and replication progress"
+        description="Node status, quorum, and replication state."
         icon={Network}
         iconColor="text-emerald-400"
         actions={
