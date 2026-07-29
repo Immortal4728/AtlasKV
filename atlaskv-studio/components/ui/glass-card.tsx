@@ -42,12 +42,12 @@ export function GlassCard({
       whileHover={hover ? { y: -2, transition: { duration: 0.2 } } : undefined}
       className={cn(
         'relative rounded-xl',
-        'bg-[oklch(0.12_0.008_280/50%)]',
-        'border border-[oklch(1_0_0/6%)]',
+        'bg-white dark:bg-[oklch(0.12_0.008_280/50%)]',
+        'border border-neutral-200/80 dark:border-[oklch(1_0_0/6%)]',
         'backdrop-blur-xl',
-        'shadow-[0_4px_24px_oklch(0_0_0/25%),inset_0_1px_0_oklch(1_0_0/4%)]',
+        'shadow-sm dark:shadow-[0_4px_24px_oklch(0_0_0/25%),inset_0_1px_0_oklch(1_0_0/4%)]',
         'transition-all duration-300',
-        hover && 'hover:border-[oklch(1_0_0/10%)] hover:bg-[oklch(0.14_0.008_280/55%)]',
+        hover && 'hover:border-emerald-500/30 dark:hover:border-[oklch(1_0_0/10%)] hover:bg-neutral-50/90 dark:hover:bg-[oklch(0.14_0.008_280/55%)]',
         hover && glowMap[glowColor],
         paddingMap[padding],
         className

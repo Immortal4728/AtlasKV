@@ -27,6 +27,7 @@ const pageTitles: Record<string, string> = {
   '/playground': 'Playground',
   '/logs': 'Raft Logs',
   '/about': 'About',
+  '/about-dev': 'About Dev',
 };
 
 export function Navbar() {

@@ -21,6 +21,7 @@ import {
   BarChart3,
   History,
   Settings,
+  Code2,
   Plus,
   RefreshCw,
   Search,
@@ -86,6 +87,10 @@ export function CommandPalette({
           <CommandItem onSelect={() => handleNavigate('/settings', 'Settings')}>
             <Settings className="h-4 w-4 mr-2 text-zinc-400" />
             Studio Connection & Settings
+          </CommandItem>
+          <CommandItem onSelect={() => handleNavigate('/about-dev', 'About Dev')}>
+            <Code2 className="h-4 w-4 mr-2 text-emerald-400" />
+            About Dev - Project & Architecture Spec
           </CommandItem>
         </CommandGroup>
 

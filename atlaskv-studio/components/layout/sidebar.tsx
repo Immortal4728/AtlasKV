@@ -70,6 +70,7 @@ const navSections = [
     label: 'System',
     items: [
       { name: 'Settings', href: '/settings', icon: Settings },
+      { name: 'About Dev', href: '/about-dev', icon: Code2 },
     ],
   },
 ];
@@ -131,7 +132,7 @@ export function Sidebar() {
             <span className="text-sm font-bold tracking-tight text-[var(--foreground)] flex items-center gap-1.5 font-sans group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">
               AtlasKV
               <span className="text-[9px] uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono font-medium">
-                v2.0
+                v3.3
               </span>
             </span>
             <span className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500">
