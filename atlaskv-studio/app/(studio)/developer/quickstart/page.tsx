@@ -56,7 +56,7 @@ export default function QuickStartPage() {
               code={`<dependency>
     <groupId>io.atlaskv</groupId>
     <artifactId>atlaskv-client</artifactId>
-    <version>3.2.0</version>
+    <version>3.3.0</version>
 </dependency>`}
             />
           </div>
@@ -65,7 +65,7 @@ export default function QuickStartPage() {
             <CodeBlock
               title="build.gradle"
               language="groovy"
-              code={`implementation 'io.atlaskv:atlaskv-client:3.2.0'`}
+              code={`implementation 'io.atlaskv:atlaskv-client:3.3.0'`}
             />
           </div>
         </div>
@@ -76,7 +76,7 @@ export default function QuickStartPage() {
           code={`import io.atlaskv.client.AtlasKVClient;
 
 AtlasKVClient client = AtlasKVClient.builder()
-    .endpoint("http://localhost:8080")
+    .endpoint("http://localhost:8081")
     .build();
 
 // Put & Get

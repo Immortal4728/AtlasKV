@@ -57,7 +57,7 @@ export default function JavaSdkPage() {
 import java.time.Duration;
 
 AtlasKVClient client = AtlasKVClient.builder()
-    .endpoint("http://localhost:8080")
+    .endpoint("http://localhost:8081")
     .timeout(Duration.ofSeconds(5))
     .maxRetries(3)
     .build();`}
@@ -82,7 +82,7 @@ public class AtlasKVConfig {
     @Bean
     public AtlasKVClient atlasKVClient() {
         return AtlasKVClient.builder()
-            .endpoint("http://localhost:8080")
+            .endpoint("http://localhost:8081")
             .build();
     }
 }`}

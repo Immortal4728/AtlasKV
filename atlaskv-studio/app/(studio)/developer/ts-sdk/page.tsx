@@ -48,7 +48,7 @@ export default function TsSdkPage() {
           code={`import { AtlasKV } from '@atlaskv/client';
 
 export const kv = new AtlasKV({
-  endpoint: 'http://localhost:8080',
+  endpoint: 'http://localhost:8081',
   timeoutMs: 5000,
 });`}
         />

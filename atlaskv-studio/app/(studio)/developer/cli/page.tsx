@@ -40,7 +40,7 @@ go install github.com/Immortal4728/AtlasKV/cmd/atlaskv@latest`}
         <CodeBlock
           title="Set Endpoint"
           language="bash"
-          code={`atlaskv config set-endpoint http://localhost:8080`}
+          code={`atlaskv config set-endpoint http://localhost:8081`}
         />
       </section>
 
