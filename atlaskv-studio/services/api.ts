@@ -132,8 +132,14 @@ httpClient.interceptors.request.use((config) => {
 
 function cleanKeyPath(key: string): string {
   if (!key) return '';
-  const trimmed = key.trim();
-  return trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+  let trimmed = key.trim();
+  while (trimmed.startsWith('/')) {
+    trimmed = trimmed.slice(1);
+  }
+  while (trimmed.length > 0 && trimmed.endsWith('/')) {
+    trimmed = trimmed.slice(0, -1);
+  }
+  return trimmed;
 }
 
 function sanitizeErrorMessage(msg: string): string {
