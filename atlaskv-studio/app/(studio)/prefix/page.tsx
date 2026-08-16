@@ -56,12 +56,12 @@ export default function PrefixPage() {
         className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 glass-card rounded-xl p-3 border border-border dark:border-[oklch(1_0_0/8%)]"
       >
         <div className="relative flex-1">
-          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500 dark:text-neutral-400" />
           <Input
             placeholder="Enter key prefix (e.g. test/users/, app/)"
             value={prefixInput}
             onChange={(e) => setPrefixInput(e.target.value)}
-            className="pl-9 bg-[var(--input)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-[var(--foreground)] placeholder:text-neutral-400 focus-visible:ring-emerald-500/30 rounded-lg"
+            className="pl-9 bg-card dark:bg-[var(--input)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-neutral-900 dark:text-[var(--foreground)] placeholder:text-neutral-500 dark:placeholder:text-neutral-400 focus-visible:ring-emerald-500/30 rounded-lg font-medium"
           />
         </div>
 
@@ -69,7 +69,7 @@ export default function PrefixPage() {
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
             <Button
               type="submit"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs px-4 py-2 shadow-sm gap-1.5 rounded-lg border-0"
+              className="bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white font-bold text-xs px-4 py-2 shadow-sm gap-1.5 rounded-lg border-0"
             >
               <Search className="h-4 w-4" />
               Scan Prefix
@@ -85,7 +85,7 @@ export default function PrefixPage() {
         transition={{ delay: 0.1 }}
         className="flex flex-wrap items-center gap-2 text-xs"
       >
-        <span className="text-neutral-600 dark:text-neutral-400 text-xs font-mono font-medium">Quick Prefixes:</span>
+        <span className="text-neutral-700 dark:text-neutral-400 text-xs font-mono font-semibold">Quick Prefixes:</span>
         {['test/users/', 'app/', 'session/', 'cache/', 'leader/'].map((p) => (
           <button
             key={p}
@@ -97,8 +97,8 @@ export default function PrefixPage() {
             className={cn(
               'px-2.5 py-1 rounded-md text-xs font-mono transition-all border font-semibold',
               activePrefix === p
-                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 shadow-xs'
-                : 'bg-[var(--surface-3)] text-neutral-700 dark:text-[oklch(1_0_0/40%)] border-border dark:border-[oklch(1_0_0/8%)] hover:text-[var(--foreground)] hover:bg-neutral-200/60 dark:hover:bg-[oklch(1_0_0/4%)]'
+                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/40 shadow-xs'
+                : 'bg-card dark:bg-[var(--surface-3)] text-neutral-800 dark:text-[oklch(1_0_0/60%)] border-border dark:border-[oklch(1_0_0/8%)] hover:text-neutral-900 dark:hover:text-[var(--foreground)] hover:bg-neutral-100 dark:hover:bg-[oklch(1_0_0/4%)]'
             )}
           >
             {p}
@@ -115,7 +115,7 @@ export default function PrefixPage() {
       >
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[var(--surface-2)] border-b border-border dark:border-[oklch(1_0_0/6%)] text-neutral-700 dark:text-[oklch(1_0_0/50%)] uppercase tracking-[0.1em] text-[10px] font-mono font-bold">
+            <thead className="bg-neutral-100/90 dark:bg-[var(--surface-2)] border-b border-border dark:border-[oklch(1_0_0/6%)] text-neutral-800 dark:text-[oklch(1_0_0/50%)] uppercase tracking-[0.1em] text-[10px] font-mono font-bold">
               <tr>
                 <th className="py-3 px-4">Matching Key</th>
                 <th className="py-3 px-4">Value</th>
@@ -124,7 +124,7 @@ export default function PrefixPage() {
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border dark:divide-[oklch(1_0_0/4%)] text-[var(--foreground)] font-mono">
+            <tbody className="divide-y divide-border dark:divide-[oklch(1_0_0/4%)] text-neutral-900 dark:text-[var(--foreground)] font-mono">
               {isLoading ? (
                 [1, 2, 3].map((i) => (
                   <tr key={i}>
@@ -143,7 +143,7 @@ export default function PrefixPage() {
                         <Filter className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div className="space-y-1">
-                        <h4 className="text-sm font-bold text-[var(--foreground)]">No Matching Prefix Keys</h4>
+                        <h4 className="text-sm font-bold text-neutral-900 dark:text-[var(--foreground)]">No Matching Prefix Keys</h4>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-sm">
                           No key-value entries matched prefix "{activePrefix}". Try scanning with a different prefix like "test/users/" or "app/".
                         </p>
@@ -160,40 +160,40 @@ export default function PrefixPage() {
                     transition={{ duration: 0.25, delay: idx * 0.03 }}
                     className="hover:bg-neutral-100/80 dark:hover:bg-[oklch(1_0_0/2%)] transition-colors group"
                   >
-                    <td className="py-3 px-4 text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-2">
-                      <KeyRound className="h-3.5 w-3.5 text-emerald-500/60 shrink-0" />
+                    <td className="py-3 px-4 text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-2">
+                      <KeyRound className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-500/60 shrink-0" />
                       <span className="truncate max-w-[240px]">{item.key}</span>
                       <button
                         onClick={() => copyToClipboard(item.key, 'Key')}
-                        className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-neutral-700 dark:hover:text-white transition-all ml-1"
+                        className="opacity-0 group-hover:opacity-100 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-all ml-1"
                       >
-                        {copiedText === item.key ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                        {copiedText === item.key ? <Check className="h-3 w-3 text-emerald-600 dark:text-emerald-500" /> : <Copy className="h-3 w-3" />}
                       </button>
                     </td>
-                    <td className="py-3 px-4 max-w-[320px] truncate text-neutral-800 dark:text-neutral-200 font-medium">
+                    <td className="py-3 px-4 max-w-[320px] truncate text-neutral-900 dark:text-neutral-200 font-medium">
                       {item.value ?? '<null>'}
                     </td>
                     <td className="py-3 px-4">
-                      <span className="px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-[oklch(1_0_0/6%)] border border-neutral-200 dark:border-[oklch(1_0_0/8%)] text-neutral-700 dark:text-neutral-300 text-[11px] font-semibold font-mono">
+                      <span className="px-2 py-0.5 rounded-md bg-neutral-200/70 dark:bg-[oklch(1_0_0/6%)] border border-neutral-300 dark:border-[oklch(1_0_0/8%)] text-neutral-900 dark:text-neutral-300 text-[11px] font-semibold font-mono">
                         v{item.version ?? 1}
                       </span>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap items-center gap-1.5">
                         {item.leaseId && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 text-[10px] font-mono">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/25 text-[10px] font-mono font-semibold">
                             <Clock className="h-3 w-3" />
                             {item.leaseId}
                           </span>
                         )}
                         {item.ttlRemaining != null && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-mono">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 text-[10px] font-mono font-semibold">
                             <Timer className="h-3 w-3" />
                             {Math.ceil(item.ttlRemaining / 1000)}s remaining
                           </span>
                         )}
                         {!item.leaseId && item.ttlRemaining == null && (
-                          <span className="text-neutral-400 dark:text-neutral-600">—</span>
+                          <span className="text-neutral-500 dark:text-neutral-500 font-semibold">—</span>
                         )}
                       </div>
                     </td>
@@ -203,7 +203,7 @@ export default function PrefixPage() {
                           variant="ghost"
                           size="icon"
                           onClick={() => copyToClipboard(item.value || '', 'Value')}
-                          className="h-7 w-7 text-neutral-500 dark:text-[oklch(1_0_0/40%)] hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-[oklch(1_0_0/6%)] rounded-lg"
+                          className="h-7 w-7 text-neutral-500 dark:text-[oklch(1_0_0/40%)] hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/60 dark:hover:bg-[oklch(1_0_0/6%)] rounded-lg"
                           title="Copy Value"
                         >
                           <Copy className="h-3.5 w-3.5" />
@@ -218,7 +218,7 @@ export default function PrefixPage() {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface-0)]/40 border-t border-[oklch(1_0_0/6%)] text-xs text-neutral-600 dark:text-[oklch(1_0_0/35%)] font-mono">
+        <div className="flex items-center justify-between px-4 py-3 bg-neutral-100/80 dark:bg-[var(--surface-0)]/40 border-t border-border dark:border-[oklch(1_0_0/6%)] text-xs text-neutral-800 dark:text-[oklch(1_0_0/35%)] font-mono font-medium">
           <span>Matches: {results.length} | Total: {totalCount}</span>
           <div className="flex items-center gap-2">
             <Button
@@ -226,17 +226,17 @@ export default function PrefixPage() {
               size="sm"
               disabled={offset === 0}
               onClick={() => setOffset(Math.max(0, offset - limit))}
-              className="h-7 px-2 border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] disabled:text-[oklch(1_0_0/20%)]"
+              className="h-7 px-2 border-border dark:border-[oklch(1_0_0/8%)] bg-card dark:bg-transparent text-neutral-700 dark:text-[oklch(1_0_0/50%)] hover:text-neutral-900 dark:hover:text-white disabled:text-neutral-400 dark:disabled:text-[oklch(1_0_0/20%)]"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
-            <span>Offset {offset}</span>
+            <span className="text-neutral-800 dark:text-neutral-300 font-semibold">Offset {offset}</span>
             <Button
               variant="outline"
               size="sm"
               disabled={offset + limit >= totalCount}
               onClick={() => setOffset(offset + limit)}
-              className="h-7 px-2 border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] disabled:text-[oklch(1_0_0/20%)]"
+              className="h-7 px-2 border-border dark:border-[oklch(1_0_0/8%)] bg-card dark:bg-transparent text-neutral-700 dark:text-[oklch(1_0_0/50%)] hover:text-neutral-900 dark:hover:text-white disabled:text-neutral-400 dark:disabled:text-[oklch(1_0_0/20%)]"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </Button>
