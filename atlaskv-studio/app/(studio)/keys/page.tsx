@@ -378,7 +378,7 @@ export default function KeysPage() {
                             variant="ghost"
                             size="icon"
                             onClick={() => copyToClipboard(item.value || '', 'Value')}
-                            className="h-7 w-7 text-[oklch(1_0_0/25%)] hover:text-white hover:bg-[oklch(1_0_0/6%)] rounded-lg"
+                            className="h-7 w-7 text-neutral-500 dark:text-[oklch(1_0_0/40%)] hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200/50 dark:hover:bg-[oklch(1_0_0/6%)] rounded-lg"
                             title="Copy Value"
                           >
                             <Copy className="h-3.5 w-3.5" />
@@ -393,7 +393,8 @@ export default function KeysPage() {
                               setErrorMsg(null);
                               setEditDialogOpen(true);
                             }}
-                            className="h-7 w-7 text-[oklch(1_0_0/25%)] hover:text-white hover:bg-[oklch(1_0_0/6%)] rounded-lg"
+                            className="h-7 w-7 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 dark:hover:bg-emerald-500/15 rounded-lg"
+                            title="Edit Key"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
@@ -405,7 +406,8 @@ export default function KeysPage() {
                               setErrorMsg(null);
                               setDeleteDialogOpen(true);
                             }}
-                            className="h-7 w-7 text-rose-400/60 hover:text-rose-300 hover:bg-rose-500/8 rounded-lg"
+                            className="h-7 w-7 text-rose-500 dark:text-rose-400/80 hover:text-rose-600 dark:hover:text-rose-300 hover:bg-rose-500/10 dark:hover:bg-rose-500/15 rounded-lg"
+                            title="Delete Key"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>

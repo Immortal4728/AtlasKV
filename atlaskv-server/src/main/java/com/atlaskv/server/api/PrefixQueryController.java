@@ -109,7 +109,11 @@ public class PrefixQueryController {
         long startNs = System.nanoTime();
 
         if (linearizable) {
-            waitForReadIndex();
+            try {
+                waitForReadIndex();
+            } catch (NotLeaderException ignored) {
+                // Follower nodes serve local state machine state when not leader
+            }
         }
 
         // Perform prefix scan with the namespaced storage prefix

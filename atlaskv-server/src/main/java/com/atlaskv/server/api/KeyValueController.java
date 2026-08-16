@@ -121,7 +121,11 @@ public class KeyValueController {
         String storageKey = NamespaceResolver.toStorageKey(clientKey, namespace);
 
         if (linearizable) {
-            waitForReadIndex();
+            try {
+                waitForReadIndex();
+            } catch (NotLeaderException ignored) {
+                // Follower nodes serve local state machine state when not leader
+            }
         }
 
         Optional<String> value = stateMachine.get(storageKey);

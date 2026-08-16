@@ -150,6 +150,24 @@ httpClient.interceptors.response.use(
       const status = error.response.status;
       const data = error.response.data as any;
 
+      if (status === 503 && data && (data.leaderAddress || data.leaderId) && !(error.config as any)?._retry) {
+        (error.config as any)._retry = true;
+        let targetHost: string | null = null;
+        if (data.leaderId === 'node1') targetHost = 'http://localhost:8081';
+        else if (data.leaderId === 'node2') targetHost = 'http://localhost:8082';
+        else if (data.leaderId === 'node3') targetHost = 'http://localhost:8083';
+        else if (data.leaderAddress) {
+          const parts = data.leaderAddress.split(':');
+          const port = parts[parts.length - 1];
+          targetHost = `http://localhost:${port}`;
+        }
+
+        if (targetHost && error.config) {
+          error.config.baseURL = targetHost;
+          return httpClient.request(error.config);
+        }
+      }
+
       if (status === 409 && data?.expectedVersion !== undefined) {
         throw new ConflictError(
           data.expectedVersion,
@@ -257,7 +275,7 @@ export const PrefixApi = {
   async query(prefix: string, offset = 0, limit = 100): Promise<PrefixQueryResponse> {
     const cleanPrefix = cleanKeyPath(prefix);
     const res = await httpClient.get<PrefixQueryResponse>(
-      `/api/v1/kv/prefix/${cleanPrefix}?offset=${offset}&limit=${limit}`
+      `/api/v1/kv/prefix/${cleanPrefix}?offset=${offset}&limit=${limit}&linearizable=false`
     );
     return res.data;
   },
