@@ -306,7 +306,6 @@ public final class NodeLifecycleManager implements org.springframework.context.S
     }
 
     private void initRaftNode() {
-        this.stateMachine.restoreSnapshot(null);
         this.clock = new SystemClock();
 
         RaftConfig raftConfig = new RaftConfig(

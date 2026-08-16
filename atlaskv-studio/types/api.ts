@@ -136,3 +136,14 @@ export interface HealthResponse {
   status: string;
   components?: Record<string, { status: string; details?: Record<string, unknown> }>;
 }
+
+export type UserRole = 'ADMIN' | 'USER';
+
+export interface AuthInfoResponse {
+  authenticated: boolean;
+  userId: string;
+  username: string;
+  role: UserRole;
+  namespace: string;
+}
+

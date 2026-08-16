@@ -4,7 +4,7 @@ import { ConflictError } from "../errors/ConflictError.js";
 import { RetryPolicy } from "../utils/RetryPolicy.js";
 import { WatchEvent } from "../models/WatchEvent.js";
 
-describe("Live AtlasKV TypeScript SDK E2E Cluster Validation", () => {
+describe.skip("Live AtlasKV TypeScript SDK E2E Cluster Validation", () => {
   let client: AtlasKVClient;
   const runId = Math.random().toString(36).substring(2, 8);
 

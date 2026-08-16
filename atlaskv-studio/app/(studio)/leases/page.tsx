@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import {
   Dialog,
   DialogContent,
@@ -65,9 +66,10 @@ export default function LeasesPage() {
       {/* Header */}
       <PageHeader
         title="Leases"
-        description="Manage distributed leases."
+        description="Manage distributed leases within the active namespace."
         icon={Clock}
         iconColor="text-purple-400"
+        badge={<NamespaceBadge showSwitcher={false} />}
         actions={
           <>
             <Button
@@ -234,29 +236,29 @@ export default function LeasesPage() {
 
       {/* Create Lease Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
+        <DialogContent className="bg-card dark:bg-[var(--surface-2)] backdrop-blur-2xl border-border dark:border-[oklch(1_0_0/8%)] text-foreground max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-purple-400">
+            <DialogTitle className="flex items-center gap-2 text-purple-500 dark:text-purple-400">
               <Clock className="h-5 w-5" /> Create Lease
             </DialogTitle>
-            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
+            <DialogDescription className="text-muted-foreground text-xs">
               Allocate a new TTL lease on the cluster.
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono break-all">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-1.5">
-              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">Lease TTL (e.g. 30s, 5m)</label>
+              <label className="font-semibold text-foreground/80 font-mono text-[11px]">Lease TTL (e.g. 30s, 5m)</label>
               <Input
                 value={ttlInput}
                 onChange={(e) => setTtlInput(e.target.value)}
-                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-purple-500/30"
+                className="bg-background dark:bg-[var(--surface-0)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-foreground placeholder:text-muted-foreground focus-visible:ring-purple-500/30"
               />
             </div>
           </div>
@@ -265,7 +267,7 @@ export default function LeasesPage() {
             <Button
               variant="outline"
               onClick={() => setCreateDialogOpen(false)}
-              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
+              className="border-border dark:border-[oklch(1_0_0/8%)] text-muted-foreground hover:bg-muted text-xs rounded-lg"
             >
               Cancel
             </Button>

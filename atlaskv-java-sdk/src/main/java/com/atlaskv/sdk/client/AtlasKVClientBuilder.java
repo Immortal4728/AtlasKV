@@ -4,6 +4,7 @@ import com.atlaskv.sdk.connection.Authentication;
 import com.atlaskv.sdk.connection.RetryPolicy;
 import com.atlaskv.sdk.util.ValidationUtil;
 
+import java.net.URI;
 import java.time.Duration;
 
 /**
@@ -13,6 +14,7 @@ public final class AtlasKVClientBuilder {
 
     private String host = "localhost";
     private int port = 8080;
+    private URI baseUri = null;
     private Duration timeout = Duration.ofSeconds(5);
     private RetryPolicy retryPolicy = RetryPolicy.defaultPolicy();
     private Authentication authentication = Authentication.none();
@@ -21,6 +23,41 @@ public final class AtlasKVClientBuilder {
      * Package-private constructor to enforce builder usage via {@link AtlasKVClient#builder()}.
      */
     AtlasKVClientBuilder() {}
+
+    /**
+     * Sets the remote endpoint URI of the AtlasKV server (e.g. "https://atlaskv.example.com" or "http://localhost:8081").
+     *
+     * @param endpoint endpoint URL
+     * @return builder instance
+     */
+    public AtlasKVClientBuilder endpoint(String endpoint) {
+        if (endpoint == null || endpoint.isBlank()) {
+            throw new IllegalArgumentException("Endpoint must not be null or blank");
+        }
+        String normalized = endpoint.trim();
+        if (!normalized.startsWith("http://") && !normalized.startsWith("https://")) {
+            normalized = "http://" + normalized;
+        }
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        this.baseUri = URI.create(normalized);
+        return this;
+    }
+
+    /**
+     * Sets the API key for authenticating requests against the AtlasKV server.
+     *
+     * @param apiKey API key secret
+     * @return builder instance
+     */
+    public AtlasKVClientBuilder apiKey(String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalArgumentException("API key must not be null or blank");
+        }
+        this.authentication = Authentication.bearer(apiKey);
+        return this;
+    }
 
     /**
      * Sets the host of the AtlasKV server.
@@ -33,7 +70,8 @@ public final class AtlasKVClientBuilder {
             throw new IllegalArgumentException("Host must not be null or blank");
         }
         this.host = host;
-        return builder();
+        this.baseUri = null;
+        return this;
     }
 
     /**
@@ -47,7 +85,8 @@ public final class AtlasKVClientBuilder {
             throw new IllegalArgumentException("Port must be between 1 and 65535");
         }
         this.port = port;
-        return builder();
+        this.baseUri = null;
+        return this;
     }
 
     /**
@@ -59,7 +98,7 @@ public final class AtlasKVClientBuilder {
     public AtlasKVClientBuilder timeout(Duration timeout) {
         ValidationUtil.validateTimeout(timeout);
         this.timeout = timeout;
-        return builder();
+        return this;
     }
 
     /**
@@ -73,7 +112,7 @@ public final class AtlasKVClientBuilder {
             throw new IllegalArgumentException("RetryPolicy must not be null");
         }
         this.retryPolicy = retryPolicy;
-        return builder();
+        return this;
     }
 
     /**
@@ -87,7 +126,7 @@ public final class AtlasKVClientBuilder {
             throw new IllegalArgumentException("Authentication must not be null");
         }
         this.authentication = authentication;
-        return builder();
+        return this;
     }
 
     /**
@@ -96,10 +135,7 @@ public final class AtlasKVClientBuilder {
      * @return configured client instance
      */
     public AtlasKVClient build() {
-        return new AtlasKVClient(host, port, timeout, retryPolicy, authentication);
-    }
-
-    private AtlasKVClientBuilder builder() {
-        return this;
+        URI effectiveUri = baseUri != null ? baseUri : URI.create("http://" + host + ":" + port);
+        return new AtlasKVClient(effectiveUri, timeout, retryPolicy, authentication);
     }
 }

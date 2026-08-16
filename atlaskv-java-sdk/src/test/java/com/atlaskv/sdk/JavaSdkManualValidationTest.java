@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+@org.junit.jupiter.api.Disabled("Requires running 3-node cluster")
 public class JavaSdkManualValidationTest {
 
     @Test

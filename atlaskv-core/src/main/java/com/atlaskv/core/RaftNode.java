@@ -91,12 +91,32 @@ public final class RaftNode implements RaftEventHandler, AutoCloseable {
             this.logStorage.compactUpTo(s.metadata().lastIncludedIndex(), s.metadata().lastIncludedTerm());
         });
         scanLogForMembership();
+        replayCommittedEntries();
     }
 
     void scanLogForMembership() {
         ClusterMembership scanned = RaftRpcHelper.rescanLogMembership(logStorage);
         if (scanned != null) {
             this.currentMembership = scanned;
+        }
+    }
+
+    /**
+     * Replays committed WAL entries into the state machine on startup.
+     * All entries persisted in the WAL were previously committed, so we
+     * advance commitIndex to the WAL's lastLogIndex and re-apply entries
+     * from lastApplied+1 through commitIndex.
+     */
+    private void replayCommittedEntries() {
+        long walLastIndex = logStorage.getLastLogIndex();
+        if (walLastIndex > lastApplied) {
+            this.commitIndex = Math.max(this.commitIndex, walLastIndex);
+            while (lastApplied < commitIndex) {
+                lastApplied++;
+                long index = lastApplied;
+                logStorage.getEntry(index).ifPresent(entry ->
+                        stateMachine.apply(entry.command()));
+            }
         }
     }
 
@@ -108,7 +128,7 @@ public final class RaftNode implements RaftEventHandler, AutoCloseable {
     @Override
     public void handleEvent(RaftEvent event) {
         Objects.requireNonNull(event, "Event must not be null");
-        if (!eventLoop.isEventLoopThread()) {
+        if (eventLoop.isRunning() && !eventLoop.isEventLoopThread()) {
             eventLoop.submit(event);
             return;
         }

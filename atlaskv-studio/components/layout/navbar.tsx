@@ -6,10 +6,12 @@ import { usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { useClusterStatus } from '@/hooks/use-cluster';
+import { useAuth } from '@/hooks/use-auth';
 import { useSidebar } from './sidebar-context';
-import { Search, Wifi, WifiOff, Menu, Bell } from 'lucide-react';
+import { Search, Wifi, WifiOff, Menu, Bell, User, ShieldCheck } from 'lucide-react';
 import { CommandPalette } from './command-palette';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import { motion } from 'framer-motion';
 
 const pageTitles: Record<string, string> = {
@@ -32,6 +34,7 @@ const pageTitles: Record<string, string> = {
 
 export function Navbar() {
   const { data: status, isError } = useClusterStatus();
+  const { authInfo, username, role: userRole, isAdmin, isAuthenticated } = useAuth();
   const { toggle } = useSidebar();
   const [commandOpen, setCommandOpen] = useState(false);
   const pathname = usePathname();
@@ -49,7 +52,7 @@ export function Navbar() {
   }, []);
 
   const isConnected = !!status && !isError;
-  const role = status?.role ?? 'UNKNOWN';
+  const clusterRole = status?.role ?? 'UNKNOWN';
   const leader = status?.currentLeader ?? '—';
   const term = status?.currentTerm ?? 0;
 
@@ -114,14 +117,38 @@ export function Navbar() {
             </kbd>
           </button>
 
+          {/* Namespace Indicator with Admin Switcher */}
+          <div className="hidden lg:flex items-center">
+            <NamespaceBadge showSwitcher={true} />
+          </div>
+
+          {/* User / Identity Pill */}
+          <Link
+            href="/settings"
+            className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)] text-xs font-mono hover:border-emerald-500/40 transition-colors"
+            title="Configure connection and API keys in Settings"
+          >
+            {isAdmin ? (
+              <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
+            ) : (
+              <User className="h-3.5 w-3.5 text-indigo-500" />
+            )}
+            <span className="font-bold text-neutral-800 dark:text-neutral-200 truncate max-w-[120px]">
+              {username}
+            </span>
+            <span className="text-[9px] uppercase px-1 py-0.2 rounded bg-neutral-200 dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 font-bold">
+              {userRole}
+            </span>
+          </Link>
+
           {/* Term */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
             <span className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-mono font-bold">Term</span>
             <span className="text-xs font-mono text-neutral-800 dark:text-neutral-200 font-bold">{term}</span>
           </div>
 
           {/* Leader */}
-          <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-neutral-100 dark:bg-[oklch(1_0_0/3%)] border border-border dark:border-[oklch(1_0_0/5%)]">
             <span className="text-xs text-neutral-500 dark:text-neutral-400 uppercase tracking-wider font-mono font-bold">Leader</span>
             <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">{leader}</span>
           </div>
@@ -150,7 +177,7 @@ export function Navbar() {
                 <WifiOff className="h-3 w-3" />
               )}
             </span>
-            <span>{isConnected ? role : 'Offline'}</span>
+            <span>{isConnected ? clusterRole : 'Offline'}</span>
           </div>
         </div>
       </header>

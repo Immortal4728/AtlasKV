@@ -23,8 +23,7 @@ public final class MetricsCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(
-                config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             Metrics m = client.cluster().metrics();
 
             OutputFormatter.printHeader("Node: " + m.nodeId());

@@ -22,6 +22,8 @@ final class CliConfigTest {
         assertThat(config.getHost()).isEqualTo("localhost");
         assertThat(config.getPort()).isEqualTo(8080);
         assertThat(config.getTimeoutSeconds()).isEqualTo(5);
+        assertThat(config.getEndpoint()).isNull();
+        assertThat(config.getApiKey()).isNull();
         assertThat(config.getAuthType()).isNull();
     }
 
@@ -45,6 +47,42 @@ final class CliConfigTest {
         assertThat(config.getTimeoutSeconds()).isEqualTo(15);
         assertThat(config.getAuthType()).isEqualTo("bearer");
         assertThat(config.getAuthToken()).isEqualTo("test-token-123");
+        assertThat(config.getApiKey()).isEqualTo("test-token-123");
+    }
+
+    @Test
+    void loadWithEndpointAndApiKey(@TempDir Path tmpDir) throws IOException {
+        Path configFile = tmpDir.resolve("config.yml");
+        String yaml = """
+                endpoint: https://atlaskv.cloud.dev
+                api-key: ak_prod_secret_9999
+                timeout: 10
+                """;
+        Files.writeString(configFile, yaml);
+
+        CliConfig config = CliConfig.load(configFile);
+
+        assertThat(config.getEndpoint()).isEqualTo("https://atlaskv.cloud.dev");
+        assertThat(config.getApiKey()).isEqualTo("ak_prod_secret_9999");
+        assertThat(config.getAuthToken()).isEqualTo("ak_prod_secret_9999");
+        assertThat(config.getAuthType()).isEqualTo("bearer");
+        assertThat(config.getTimeoutSeconds()).isEqualTo(10);
+    }
+
+    @Test
+    void setAndSaveConfig(@TempDir Path tmpDir) throws IOException {
+        Path configFile = tmpDir.resolve("config.yml");
+        CliConfig config = CliConfig.load(configFile);
+
+        config.set("endpoint", "https://remote.atlaskv.io");
+        config.set("api-key", "ak_saved_key_12345");
+        config.set("timeout", "20");
+        config.save(configFile);
+
+        CliConfig reloaded = CliConfig.load(configFile);
+        assertThat(reloaded.getEndpoint()).isEqualTo("https://remote.atlaskv.io");
+        assertThat(reloaded.getApiKey()).isEqualTo("ak_saved_key_12345");
+        assertThat(reloaded.getTimeoutSeconds()).isEqualTo(20);
     }
 
     @Test

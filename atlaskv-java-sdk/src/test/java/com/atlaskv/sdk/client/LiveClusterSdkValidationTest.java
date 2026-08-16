@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 /**
  * Live E2E Integration test for AtlasKV Java SDK against running 3-node cluster.
  */
+@org.junit.jupiter.api.Disabled("Requires running 3-node cluster")
 public class LiveClusterSdkValidationTest {
 
     private static AtlasKVClient client;

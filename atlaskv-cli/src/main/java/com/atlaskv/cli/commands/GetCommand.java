@@ -27,7 +27,7 @@ public final class GetCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             KeyValue result = client.keyValue().get(key);
             if (!result.exists()) {
                 OutputFormatter.printWarning("Key not found: " + key);

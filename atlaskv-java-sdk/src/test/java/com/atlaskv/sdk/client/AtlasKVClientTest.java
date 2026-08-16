@@ -1,5 +1,6 @@
 package com.atlaskv.sdk.client;
 
+import com.atlaskv.sdk.exceptions.AtlasKVException;
 import com.atlaskv.sdk.exceptions.ConflictException;
 import com.atlaskv.sdk.exceptions.NotLeaderException;
 import com.atlaskv.sdk.exceptions.TimeoutException;
@@ -7,6 +8,7 @@ import com.atlaskv.sdk.models.KeyValue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -20,6 +22,7 @@ import java.time.Duration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -41,16 +44,18 @@ class AtlasKVClientTest {
                 .timeout(Duration.ofSeconds(1))
                 .build();
         
-        // Inject mock HttpClient into the client's connection pool
-        // Using reflection to avoid exposing public setters
+        injectMockClient(client, mockHttpClient);
+    }
+
+    private void injectMockClient(AtlasKVClient targetClient, HttpClient mock) {
         try {
             java.lang.reflect.Field poolField = AtlasKVClient.class.getDeclaredField("connectionPool");
             poolField.setAccessible(true);
-            Object pool = poolField.get(client);
+            Object pool = poolField.get(targetClient);
             
             java.lang.reflect.Field clientField = pool.getClass().getDeclaredField("httpClient");
             clientField.setAccessible(true);
-            clientField.set(pool, mockHttpClient);
+            clientField.set(pool, mock);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -61,6 +66,30 @@ class AtlasKVClientTest {
         AtlasKVClient defaultClient = AtlasKVClient.builder().build();
         assertThat(defaultClient.timeout()).isEqualTo(Duration.ofSeconds(5));
         assertThat(defaultClient.activeBaseUri()).isEqualTo(URI.create("http://localhost:8080"));
+    }
+
+    @Test
+    void testClientBuilderEndpointAndApiKey() throws Exception {
+        AtlasKVClient remoteClient = AtlasKVClient.builder()
+                .endpoint("https://atlaskv.cloud.dev")
+                .apiKey("ak_test_secret_12345")
+                .build();
+
+        assertThat(remoteClient.activeBaseUri()).isEqualTo(URI.create("https://atlaskv.cloud.dev"));
+        injectMockClient(remoteClient, mockHttpClient);
+
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockResponse.body()).thenReturn("{\"key\":\"k1\",\"value\":\"v1\",\"exists\":true,\"version\":1,\"createdAt\":1,\"updatedAt\":1}");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(mockResponse);
+
+        remoteClient.keyValue().get("k1");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockHttpClient).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest req = captor.getValue();
+
+        assertThat(req.uri()).isEqualTo(URI.create("https://atlaskv.cloud.dev/api/v1/kv/k1"));
+        assertThat(req.headers().firstValue("Authorization")).contains("Bearer ak_test_secret_12345");
     }
 
     @Test
@@ -91,6 +120,36 @@ class AtlasKVClientTest {
     }
 
     @Test
+    void testUnauthorized401Handling() throws Exception {
+        when(mockResponse.statusCode()).thenReturn(401);
+        when(mockResponse.body()).thenReturn("{\"type\":\"https://atlaskv.dev/errors/unauthorized\",\"title\":\"Unauthorized\"}");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(mockResponse);
+
+        assertThatThrownBy(() -> client.keyValue().get("key"))
+                .isInstanceOf(AtlasKVException.class)
+                .hasMessageContaining("401 Unauthorized")
+                .satisfies(e -> {
+                    AtlasKVException ex = (AtlasKVException) e;
+                    assertThat(ex.getStatusCode()).isEqualTo(401);
+                });
+    }
+
+    @Test
+    void testForbidden403Handling() throws Exception {
+        when(mockResponse.statusCode()).thenReturn(403);
+        when(mockResponse.body()).thenReturn("{\"type\":\"https://atlaskv.dev/errors/forbidden\",\"title\":\"Forbidden\"}");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(mockResponse);
+
+        assertThatThrownBy(() -> client.keyValue().get("key"))
+                .isInstanceOf(AtlasKVException.class)
+                .hasMessageContaining("403 Forbidden")
+                .satisfies(e -> {
+                    AtlasKVException ex = (AtlasKVException) e;
+                    assertThat(ex.getStatusCode()).isEqualTo(403);
+                });
+    }
+
+    @Test
     void testCasConflictThrowsConflictException() throws Exception {
         String conflictJson = "{\"expectedVersion\":1,\"currentVersion\":2,\"message\":\"Version mismatch: expected 1 but current is 2\"}";
         when(mockResponse.statusCode()).thenReturn(409);
@@ -114,8 +173,6 @@ class AtlasKVClientTest {
         when(mockResponse.body()).thenReturn(notLeaderJson);
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(mockResponse);
 
-        // When a NotLeaderException is thrown, the execute method will catch it, try to redirect, and retry.
-        // In this test, we make the mock send() throw on all retries.
         assertThatThrownBy(() -> client.keyValue().put("key", "val"))
                 .isInstanceOf(NotLeaderException.class)
                 .satisfies(e -> {

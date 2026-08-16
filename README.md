@@ -79,35 +79,37 @@ AtlasKV Studio provides a management console for cluster monitoring and data exp
 ### 1. Java SDK (`atlaskv-java-sdk`)
 
 ```java
-import com.atlaskv.sdk.AtlasKVClient;
-import com.atlaskv.sdk.model.*;
+import com.atlaskv.sdk.client.AtlasKVClient;
+import com.atlaskv.sdk.models.*;
 
+// Remote connection with endpoint & API key
 AtlasKVClient client = AtlasKVClient.builder()
-    .baseUri("http://localhost:8081")
-    .autoRedirect(true)
+    .endpoint("https://atlaskv.example.com")
+    .apiKey("ak_live_abcdef123456")
     .build();
 
 // Put & Get
-client.put("app/theme", "dark");
-KeyValueResponse kv = client.get("app/theme");
+client.keyValue().put("app/theme", "dark");
+KeyValue kv = client.keyValue().get("app/theme");
 System.out.println("Value: " + kv.value() + " (v" + kv.version() + ")");
 
 // Atomic Compare-And-Swap (CAS)
-client.casPut("app/theme", "light", kv.version());
+client.keyValue().casPut("app/theme", "light", kv.version());
 
 // Distributed Lease
-LeaseResponse lease = client.createLease("30s");
-client.put("session/user_1", "active", "30s", lease.leaseId());
+Lease lease = client.lease().createLease("30s");
+client.keyValue().putWithLease("session/user_1", "active", lease.leaseId());
 ```
 
 ### 2. TypeScript SDK (`atlaskv-ts-sdk`)
 
 ```typescript
-import { AtlasKVClient } from 'atlaskv-sdk';
+import { AtlasKVClient } from 'atlaskv-ts-sdk';
 
+// Remote connection with endpoint & API key
 const client = new AtlasKVClient({
-  baseUrl: 'http://localhost:8081',
-  autoRedirect: true,
+  endpoint: 'https://atlaskv.example.com',
+  apiKey: 'ak_live_abcdef123456',
 });
 
 // Put & Get
@@ -115,25 +117,30 @@ await client.kv.put('config/max_connections', '100');
 const entry = await client.kv.get('config/max_connections');
 
 // Watch API Stream
-const session = client.watch.watchKey('config/max_connections', (event) => {
-  console.log('Key modified:', event.key, event.value);
+const session = client.watch.watch('config/max_connections', {
+  onEvent: (event) => console.log('Key modified:', event.key, event.value),
+  onError: (err) => console.error('Watch error:', err),
 });
 ```
 
 ### 3. AtlasKV CLI (`atlaskv-cli`)
 
 ```bash
-# Set key
-atlaskv-cli put app/config/mode production
+# Configure default remote endpoint and API key
+atlaskv config set endpoint https://atlaskv.example.com
+atlaskv config set api-key ak_live_abcdef123456
+
+# Or pass explicitly per-command
+atlaskv --endpoint https://atlaskv.example.com --api-key <secret> put app/config/mode production
 
 # Get key
-atlaskv-cli get app/config/mode
+atlaskv get app/config/mode
 
 # Prefix query
-atlaskv-cli prefix app/
+atlaskv prefix app/
 
 # Create lease
-atlaskv-cli lease create 60s
+atlaskv lease create 60s
 ```
 
 ---

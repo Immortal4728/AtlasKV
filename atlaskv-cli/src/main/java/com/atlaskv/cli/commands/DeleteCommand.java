@@ -26,7 +26,7 @@ public final class DeleteCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             boolean deleted = client.keyValue().delete(key);
             if (deleted) {
                 OutputFormatter.printSuccess("Deleted key: " + key);

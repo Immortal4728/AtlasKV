@@ -87,13 +87,24 @@ public final class WatchApi {
             int backoffMs = 500;
 
             while (active.get()) {
-                URI targetUri = client.activeBaseUri().resolve(path);
-                HttpRequest request = HttpRequest.newBuilder()
+                URI activeUri = client.activeBaseUri();
+                String rawPath = path;
+                String fullPath = (activeUri.getPath() != null && !activeUri.getPath().isEmpty()
+                        && !activeUri.getPath().equals("/")
+                        ? activeUri.getPath().replaceAll("/+$", "") : "")
+                        + (rawPath.startsWith("/") ? rawPath : "/" + rawPath);
+                URI targetUri = URI.create(activeUri.getScheme() + "://" + activeUri.getAuthority() + fullPath);
+
+                HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                         .uri(targetUri)
                         .header("Accept", "text/event-stream")
                         .timeout(Duration.ofHours(24)) // Extremely long timeout for streaming
-                        .GET()
-                        .build();
+                        .GET();
+
+                // Apply configured authentication (e.g. API key Bearer token)
+                client.authentication().apply(reqBuilder);
+
+                HttpRequest request = reqBuilder.build();
 
                 try {
                     LOG.debug("Establishing watch stream to {}", targetUri);
@@ -111,8 +122,12 @@ public final class WatchApi {
                             this.activeStream = null;
                         }
                     } else if (response.statusCode() == 503) {
-                        // Leader changed or node unavailable, backoff and retry (client may redirect baseUri in next loop)
+                        // Leader changed or node unavailable, backoff and retry
                         LOG.warn("Watch stream rejected with status 503 from {}", targetUri);
+                    } else if (response.statusCode() == 401 || response.statusCode() == 403) {
+                        LOG.error("Watch stream rejected with auth error HTTP {}", response.statusCode());
+                        listener.onError(new IOException("Watch authentication failed: HTTP " + response.statusCode()));
+                        break;
                     } else {
                         LOG.warn("Watch stream received HTTP {}, retrying...", response.statusCode());
                     }

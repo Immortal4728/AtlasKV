@@ -112,6 +112,7 @@ export class WatchSession implements AsyncIterable<WatchEvent> {
       const headers: Record<string, string> = {
         Accept: "text/event-stream",
       };
+      this.httpClient.applyAuth(headers);
 
       this.abortController = new AbortController();
 
@@ -186,6 +187,11 @@ export class WatchSession implements AsyncIterable<WatchEvent> {
               }
             }
           }
+        } else if (response.status === 401 || response.status === 403) {
+          const authErr = new Error(`Watch stream authentication failed: HTTP ${response.status}`);
+          this.listener?.onError?.(authErr);
+          this.pushError(authErr);
+          break;
         } else if (response.status === 503) {
           console.warn(`Watch stream rejected with status 503 from ${url}`);
         } else {

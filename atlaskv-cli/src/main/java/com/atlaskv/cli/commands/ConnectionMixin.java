@@ -7,6 +7,10 @@ import picocli.CommandLine.Option;
  */
 public final class ConnectionMixin {
 
+    @Option(names = {"-e", "--endpoint"},
+            description = "AtlasKV server endpoint URL (e.g. https://atlaskv.example.com)")
+    private String endpoint;
+
     @Option(names = {"-H", "--host"},
             description = "AtlasKV server host (default: from config or localhost)")
     private String host;
@@ -15,11 +19,23 @@ public final class ConnectionMixin {
             description = "AtlasKV server port (default: from config or 8080)")
     private Integer port;
 
+    @Option(names = {"-k", "--api-key"},
+            description = "AtlasKV API key secret")
+    private String apiKey;
+
+    public String getEndpoint() {
+        return endpoint;
+    }
+
     public String getHost() {
         return host;
     }
 
     public Integer getPort() {
         return port;
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 }

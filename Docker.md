@@ -88,9 +88,30 @@ The AtlasKV container image is highly configurable via standard environment vari
 | `GRPC_PORT` | Port where the gRPC Raft consensus engine listens | `50051` | `50052` |
 | `DATA_DIRECTORY` | Location where write-ahead logs, metadata, and snapshots are saved | `/app/data` | `/app/data` |
 | `PEER_NODES` | Comma-separated list of peer identities and their addresses (`id:host:port`) | `""` | `node1:node1:50051,node2:node2:50052,node3:node3:50053` |
+| `AUTH_ENABLED` | Enable REST API authentication | `false` | `true` |
+| `AUTH_TOKEN` | Secret token for API authentication (creates initial ADMIN identity) | `""` | `my-secret-token` |
+| `ADMIN_USERNAME` | Display name for the default administrator user | `Administrator` | `Admin` |
 | `LOG_LEVEL` | Logging verbosity for com.atlaskv packages (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`) | `INFO` | `INFO` |
 
----
+### Authentication & Identity
+
+AtlasKV uses a simple identity-based authentication model:
+
+- **Users** have an ID, display name, role (`USER` or `ADMIN`), and active status.
+- **API Keys** map a secret token to a user. Each request is authenticated by matching the token to an API key, then resolving the associated user.
+- **Roles**: `ADMIN` has full system access; `USER` has standard authenticated API access.
+
+**Default behavior (`AUTH_ENABLED=false`):**
+All requests are allowed. A local development principal (`Local Developer`, `ADMIN` role) is automatically injected for downstream code.
+
+**Authenticated mode (`AUTH_ENABLED=true`):**
+Setting `AUTH_TOKEN` automatically creates an `admin` user with the `ADMIN` role and an API key using the provided token. Requests must include credentials via:
+- `Authorization: Bearer <token>`
+- `Authorization: ApiKey <token>`
+- `X-API-Key: <token>`
+
+Health endpoints (`/actuator/health`) remain publicly accessible regardless of authentication mode.
+
 
 ## 5. Startup & Shutdown Commands
 
@@ -212,3 +233,83 @@ If you change the `NODE_ID` in the `docker-compose.yml` but keep the same mounte
 
 ### Node Unhealthy status
 If a node is marked as `unhealthy` in `docker compose ps`, inspect the logs using `docker compose logs <node-name>` to see the exact exception. Usually, this is caused by network partition issues (such as firewall blocks or Docker network interface failures) preventing gRPC peer connections.
+
+---
+
+## 9. Cloud Deployment Preparation
+
+AtlasKV is engineered with strict separation between public entrypoints and private cluster consensus networking.
+
+### Port Exposure & Network Isolation
+* **Public REST API**: Port `8081` (Node 1 / Leader entrypoint) or load balancer target.
+* **Internal gRPC Consensus**: Ports `50051`, `50052`, `50053` communicate exclusively over internal container / VPC bridge networks (`atlaskv-net`). These must NOT be exposed to the public internet.
+* **Studio Management Console**: Port `3000` (internal or secured via reverse proxy).
+
+### Required Environment Variables
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `AUTH_ENABLED` | Set to `true` to require token authentication on REST APIs | `false` |
+| `AUTH_TOKEN` | Secret API token for clients and Studio backend communication | `""` |
+| `REST_BIND_HOST` | Network interface to bind REST HTTP server | `0.0.0.0` |
+| `GRPC_BIND_HOST` | Network interface to bind gRPC consensus server | `0.0.0.0` |
+| `SERVER_PORT` / `REST_PORT` | HTTP REST listening port | `8081` |
+| `GRPC_PORT` | gRPC consensus listening port | `50051` |
+| `RAFT_NODE_ID` / `NODE_ID` | Raft peer node identifier (`node1`, `node2`, `node3`) | `node1` |
+| `CLUSTER_MEMBERS` | Comma-separated cluster topology (`node1:host1:port1,node2:host2:port2,...`) | - |
+| `BACKEND_URL` | Studio backend proxy target | `http://atlaskv-node1:8081` |
+
+### Enabling REST API Authentication Locally
+To run the cluster in authenticated mode locally:
+```bash
+AUTH_ENABLED=true AUTH_TOKEN=my-secure-cluster-token docker compose up -d --build
+```
+
+Clients must supply the token via any of the supported headers:
+* `Authorization: Bearer <token>`
+* `Authorization: ApiKey <token>`
+* `X-API-Key: <token>`
+
+Unauthenticated requests receive `401 Unauthorized`, while `/actuator/health` remains accessible without credentials for container health probing.
+
+### Simple HTTPS Reverse Proxy (Caddy / Nginx)
+When deploying to a single VM on a cloud provider (e.g., Google Cloud Compute Engine, AWS EC2, or Oracle Cloud Free Tier), TLS/HTTPS should be terminated at a lightweight reverse proxy like Caddy or Nginx. AtlasKV automatically handles `X-Forwarded-Proto` and `X-Forwarded-Host` headers.
+
+#### Option A: Caddy (`/etc/caddy/Caddyfile`)
+```caddy
+# Automatically provisions free Let's Encrypt SSL certificates
+atlaskv.yourdomain.com {
+    # Route Studio UI
+    reverse_proxy localhost:3000
+
+    # Or route directly to AtlasKV REST API:
+    # handle_path /api/* {
+    #     reverse_proxy localhost:8081
+    # }
+}
+```
+
+#### Option B: Nginx
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name atlaskv.yourdomain.com;
+
+    ssl_certificate /etc/letsencrypt/live/atlaskv.yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/atlaskv.yourdomain.com/privkey.pem;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+### Consensus & Network Architecture Summary
+* **gRPC Consensus (50051-50053)**: Operates in plaintext across containers inside the private Docker bridge network (`atlaskv-net`). These ports are NOT exposed externally to avoid unauthorized cluster operations.
+* **REST HTTP Server (8081-8083)**: Exposes the client REST API for KV CRUD, CAS, leases, and watches. Can be optionally secured with API Key authentication (`AUTH_ENABLED=true`).
+* **Studio Management UI (3000)**: Serves the web console and securely proxies API requests.
+
+

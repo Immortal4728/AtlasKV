@@ -17,7 +17,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
-import { getSavedBaseUrl } from '@/services/api';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
+import { useAuth } from '@/hooks/use-auth';
+import { getSavedBaseUrl, getSavedApiKey, getSavedAdminNamespace } from '@/services/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +33,7 @@ interface LogEntry {
 }
 
 export default function WatchPage() {
-  const [targetKey, setTargetKey] = useState('app/');
+  const [targetKey, setTargetKey] = useState('app');
   const [isPrefix, setIsPrefix] = useState(true);
   const [isStreaming, setIsStreaming] = useState(true);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -59,13 +61,26 @@ export default function WatchPage() {
 
   // Connect to real AtlasKV backend SSE stream
   useEffect(() => {
-    if (!isStreaming || !targetKey) return;
+    if (!isStreaming) return;
 
     const baseUrl = getSavedBaseUrl() || window.location.origin;
+    const cleanTarget = targetKey.trim().replace(/^\/+|\/+$/g, '');
     const path = isPrefix
-      ? `/api/v1/watch/prefix/${encodeURIComponent(targetKey)}`
-      : `/api/v1/watch/${encodeURIComponent(targetKey)}`;
-    const streamUrl = `${baseUrl}${path}`;
+      ? cleanTarget ? `/api/v1/watch/prefix/${encodeURIComponent(cleanTarget)}` : `/api/v1/watch/prefix`
+      : `/api/v1/watch/${encodeURIComponent(cleanTarget)}`;
+    
+    // Construct query parameters for browser EventSource
+    const params = new URLSearchParams();
+    const apiKey = getSavedApiKey();
+    if (apiKey) {
+      params.set('apiKey', apiKey);
+    }
+    const adminNs = getSavedAdminNamespace();
+    if (adminNs) {
+      params.set('namespace', adminNs);
+    }
+    const queryString = params.toString() ? `?${params.toString()}` : '';
+    const streamUrl = `${baseUrl}${path}${queryString}`;
 
     const nowStr = () => new Date().toLocaleTimeString();
 
@@ -83,7 +98,7 @@ export default function WatchPage() {
       ]);
     };
 
-    addLog('STATUS', 'Stream', `Connecting SSE stream to ${streamUrl}...`);
+    addLog('STATUS', 'Stream', `Connecting SSE stream to ${baseUrl}${path}...`);
 
     try {
       const es = new EventSource(streamUrl);
@@ -157,21 +172,24 @@ export default function WatchPage() {
       {/* Header */}
       <PageHeader
         title="Watch Terminal"
-        description="Monitor cluster events."
+        description="Monitor real-time cluster storage mutation events via SSE."
         icon={Eye}
         iconColor="text-cyan-400"
         badge={
-          <span
-            className={cn(
-              'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium border',
-              isStreaming
-                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                : 'bg-[oklch(1_0_0/4%)] text-[oklch(1_0_0/40%)] border-[oklch(1_0_0/8%)]'
-            )}
-          >
-            <Radio className={cn('h-3 w-3', isStreaming && 'animate-pulse text-emerald-400')} />
-            {isStreaming ? 'STREAM ACTIVE' : 'PAUSED'}
-          </span>
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-mono font-medium border',
+                isStreaming
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-[oklch(1_0_0/4%)] text-[oklch(1_0_0/40%)] border-[oklch(1_0_0/8%)]'
+              )}
+            >
+              <Radio className={cn('h-3 w-3', isStreaming && 'animate-pulse text-emerald-400')} />
+              {isStreaming ? 'STREAM ACTIVE' : 'PAUSED'}
+            </span>
+            <NamespaceBadge showSwitcher={false} />
+          </div>
         }
       />
 

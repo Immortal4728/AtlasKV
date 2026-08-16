@@ -7,11 +7,34 @@ import { Validation } from "../utils/Validation.js";
  * Builder class for configuring and creating instances of AtlasKVClient.
  */
 export class AtlasKVClientBuilder {
+  private _endpoint?: string;
   private _host = "localhost";
   private _port = 8080;
   private _timeoutMs = 5000;
   private _retryPolicy = RetryPolicy.defaultPolicy();
   private _authentication = Authentication.none();
+
+  /**
+   * Sets the remote endpoint URL of the AtlasKV server (e.g. "https://atlaskv.example.com" or "http://localhost:8081").
+   */
+  public endpoint(endpoint: string): this {
+    if (!endpoint || endpoint.trim().length === 0) {
+      throw new Error("Endpoint must not be null or blank");
+    }
+    this._endpoint = endpoint.trim();
+    return this;
+  }
+
+  /**
+   * Sets the API key secret for authentication.
+   */
+  public apiKey(apiKey: string): this {
+    if (!apiKey || apiKey.trim().length === 0) {
+      throw new Error("API key must not be null or blank");
+    }
+    this._authentication = Authentication.bearer(apiKey.trim());
+    return this;
+  }
 
   /**
    * Sets the host of the AtlasKV server.
@@ -21,6 +44,7 @@ export class AtlasKVClientBuilder {
       throw new Error("Host must not be null or blank");
     }
     this._host = host;
+    this._endpoint = undefined;
     return this;
   }
 
@@ -32,6 +56,7 @@ export class AtlasKVClientBuilder {
       throw new Error("Port must be between 1 and 65535");
     }
     this._port = port;
+    this._endpoint = undefined;
     return this;
   }
 
@@ -70,8 +95,9 @@ export class AtlasKVClientBuilder {
    * Builds and returns a new AtlasKVClient instance.
    */
   public build(): AtlasKVClient {
+    const target = this._endpoint || this._host;
     return new AtlasKVClient(
-      this._host,
+      target,
       this._port,
       this._timeoutMs,
       this._retryPolicy,

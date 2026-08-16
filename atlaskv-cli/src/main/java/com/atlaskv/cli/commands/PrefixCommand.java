@@ -37,7 +37,7 @@ public final class PrefixCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             PrefixResult result = client.keyValue().prefix(prefix, offset, limit);
 
             OutputFormatter.printHeader("Prefix Scan: " + prefix);

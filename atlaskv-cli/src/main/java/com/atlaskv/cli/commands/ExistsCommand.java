@@ -26,7 +26,7 @@ public final class ExistsCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             boolean exists = client.keyValue().exists(key);
             if (exists) {
                 OutputFormatter.printSuccess("Key exists: " + key);

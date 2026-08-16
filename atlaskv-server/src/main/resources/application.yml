@@ -10,7 +10,9 @@ spring:
 
 # ── HTTP Server ──────────────────────────────────────────────
 server:
+  address: ${REST_BIND_HOST:${SERVER_ADDRESS:0.0.0.0}}
   port: ${SERVER_PORT:${REST_PORT:8081}}
+  forward-headers-strategy: framework
   shutdown: graceful
 
 # ── AtlasKV Node Configuration ──────────────────────────────
@@ -31,8 +33,13 @@ atlaskv:
     rpc-timeout-ms: 2000
 
   server:
-    host: 0.0.0.0
+    host: ${GRPC_BIND_HOST:${GRPC_HOST:0.0.0.0}}
     grpc-port: ${GRPC_PORT:50051}
+
+  security:
+    auth-enabled: ${AUTH_ENABLED:${ATLASKV_SECURITY_AUTH_ENABLED:false}}
+    auth-token: ${AUTH_TOKEN:${ATLASKV_SECURITY_AUTH_TOKEN:}}
+    admin-username: ${ADMIN_USERNAME:${ATLASKV_SECURITY_ADMIN_USERNAME:Administrator}}
 
 # ── OpenAPI / Swagger ────────────────────────────────────────
 springdoc:
@@ -48,7 +55,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics
+        include: health,info
   endpoint:
     health:
       show-details: always

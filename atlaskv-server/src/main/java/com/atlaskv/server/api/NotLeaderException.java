@@ -65,18 +65,13 @@ public final class NotLeaderException extends RuntimeException {
         String host = leaderSocketAddr.getHostString();
         int grpcPort = leaderSocketAddr.getPort();
 
-        // 1. Check if running inside docker (hosts: node1, node2, node3)
-        if (host.matches("node\\d+")) {
-            return host + ":8080";
-        }
-
-        // 2. Local execution mapping (50051 -> 8081, 50052 -> 8082, 50053 -> 8083)
+        // 1. Check if running inside docker or local network with standard port convention (50051 -> 8081, 50052 -> 8082, 50053 -> 8083)
         if (grpcPort >= 50050 && grpcPort <= 50060) {
             int nodeNum = grpcPort - 50050;
             return host + ":" + (8080 + nodeNum);
         }
 
-        // Default fallback
+        // 2. Default fallback
         return host + ":" + grpcPort;
     }
 }

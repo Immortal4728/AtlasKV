@@ -26,6 +26,9 @@ public final class AtlasKvProperties {
     @NotNull
     private ServerProperties server = new ServerProperties();
 
+    @NotNull
+    private SecurityProperties security = new SecurityProperties();
+
     /**
      * Returns node identity properties.
      *
@@ -78,6 +81,24 @@ public final class AtlasKvProperties {
      */
     public void setServer(ServerProperties server) {
         this.server = server;
+    }
+
+    /**
+     * Returns REST API security configuration properties.
+     *
+     * @return security properties
+     */
+    public SecurityProperties getSecurity() {
+        return security;
+    }
+
+    /**
+     * Sets REST API security configuration properties.
+     *
+     * @param security security properties
+     */
+    public void setSecurity(SecurityProperties security) {
+        this.security = security;
     }
 
     /**
@@ -324,6 +345,72 @@ public final class AtlasKvProperties {
          */
         public void setGrpcPort(int grpcPort) {
             this.grpcPort = grpcPort;
+        }
+    }
+
+    /**
+     * REST API security configuration.
+     */
+    public static final class SecurityProperties {
+
+        private boolean authEnabled = false;
+
+        private String authToken = "";
+
+        private String adminUsername = "Administrator";
+
+        /**
+         * Returns whether REST API authentication is enabled.
+         *
+         * @return true if authentication is enabled
+         */
+        public boolean isAuthEnabled() {
+            return authEnabled;
+        }
+
+        /**
+         * Sets whether REST API authentication is enabled.
+         *
+         * @param authEnabled true to enable authentication
+         */
+        public void setAuthEnabled(boolean authEnabled) {
+            this.authEnabled = authEnabled;
+        }
+
+        /**
+         * Returns the secret authentication token.
+         *
+         * @return authentication token
+         */
+        public String getAuthToken() {
+            return authToken;
+        }
+
+        /**
+         * Sets the secret authentication token.
+         *
+         * @param authToken authentication token
+         */
+        public void setAuthToken(String authToken) {
+            this.authToken = authToken;
+        }
+
+        /**
+         * Returns the administrator display name.
+         *
+         * @return administrator username
+         */
+        public String getAdminUsername() {
+            return adminUsername;
+        }
+
+        /**
+         * Sets the administrator display name.
+         *
+         * @param adminUsername administrator username
+         */
+        public void setAdminUsername(String adminUsername) {
+            this.adminUsername = adminUsername;
         }
     }
 }

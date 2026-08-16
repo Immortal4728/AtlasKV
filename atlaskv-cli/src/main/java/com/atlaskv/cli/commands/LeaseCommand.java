@@ -56,8 +56,7 @@ public final class LeaseCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 Lease lease;
                 if (leaseId != null && !leaseId.isBlank()) {
                     lease = client.lease().createLease(leaseId, ttl);
@@ -91,8 +90,7 @@ public final class LeaseCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 client.lease().renewLease(leaseId);
                 OutputFormatter.printSuccess("Lease renewed: " + leaseId);
             }
@@ -116,8 +114,7 @@ public final class LeaseCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 client.lease().revokeLease(leaseId);
                 OutputFormatter.printSuccess("Lease revoked: " + leaseId);
             }
@@ -138,8 +135,7 @@ public final class LeaseCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 List<Lease> leases = client.lease().listLeases();
                 if (leases.isEmpty()) {
                     OutputFormatter.printInfo("No active leases");

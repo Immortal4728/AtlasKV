@@ -26,7 +26,6 @@ class SnapshotIntegrationTest {
         harness = RaftTestHarness.builder()
                 .snapshotThresholdEntries(3) // Auto-snapshot after 3 committed entries
                 .build();
-        harness.node().start();
     }
 
     @AfterEach

@@ -74,6 +74,7 @@ final class AtlasKVCliTest {
         CommandLine cmd = AtlasKVCli.createCommandLine();
         CommandLine config = cmd.getSubcommands().get("config");
         assertThat(config.getSubcommands()).containsKey("show");
+        assertThat(config.getSubcommands()).containsKey("set");
         assertThat(config.getSubcommands()).containsKey("init");
         assertThat(config.getSubcommands()).containsKey("path");
     }

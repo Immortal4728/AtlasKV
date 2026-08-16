@@ -123,6 +123,16 @@
                 <artifactId>atlaskv-test</artifactId>
                 <version>${project.version}</version>
             </dependency>
+            <dependency>
+                <groupId>com.atlaskv</groupId>
+                <artifactId>atlaskv-java-sdk</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.atlaskv</groupId>
+                <artifactId>atlaskv-cli</artifactId>
+                <version>${project.version}</version>
+            </dependency>
 
             <!-- ── gRPC & Protobuf ────────────────────────────────────── -->
             <dependency>

@@ -34,7 +34,7 @@ public final class CasCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        try (AtlasKVClient client = ClientFactory.create(config, conn.getHost(), conn.getPort())) {
+        try (AtlasKVClient client = ClientFactory.create(config, conn)) {
             KeyValue result = client.keyValue().casPut(key, value, version);
             OutputFormatter.printSuccess("CAS update succeeded");
             OutputFormatter.printField("Key", result.key());

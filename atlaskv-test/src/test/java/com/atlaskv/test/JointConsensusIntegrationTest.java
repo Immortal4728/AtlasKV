@@ -24,7 +24,6 @@ class JointConsensusIntegrationTest {
     @BeforeEach
     void setUp() {
         harness = RaftTestHarness.threeNodeCluster();
-        harness.node().start();
     }
 
     @AfterEach

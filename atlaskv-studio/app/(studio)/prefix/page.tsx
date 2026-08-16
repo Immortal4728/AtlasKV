@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { PageHeader } from '@/components/ui/page-header';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import { usePrefix } from '@/hooks/use-kv';
 import { cn } from '@/lib/utils';
 
@@ -32,9 +33,10 @@ export default function PrefixPage() {
       {/* Header */}
       <PageHeader
         title="Prefix Explorer"
-        description="Query keys by prefix."
+        description="Query and iterate over keys matching a common prefix within the active namespace."
         icon={Filter}
         iconColor="text-emerald-400"
+        badge={<NamespaceBadge showSwitcher={false} />}
       />
 
       {/* Query Bar */}

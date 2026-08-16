@@ -24,6 +24,78 @@ describe("AtlasKVClient & APIs Unit Tests", () => {
     vi.restoreAllMocks();
   });
 
+  describe("Client Configuration & Authentication", () => {
+    it("should instantiate client via config object with endpoint and apiKey", async () => {
+      const remoteClient = new AtlasKVClient({
+        endpoint: "https://atlaskv.cloud.dev",
+        apiKey: "ak_test_token_12345",
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        status: 200,
+        text: async () => JSON.stringify({ key: "k1", value: "v1", exists: true }),
+      });
+
+      await remoteClient.keyValue().get("k1");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://atlaskv.cloud.dev/api/v1/kv/k1",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer ak_test_token_12345",
+          }),
+        })
+      );
+    });
+
+    it("should configure client via builder with endpoint and apiKey", async () => {
+      const remoteClient = AtlasKVClient.builder()
+        .endpoint("http://remote-cluster:8080")
+        .apiKey("ak_builder_key")
+        .build();
+
+      mockFetch.mockResolvedValueOnce({
+        status: 200,
+        text: async () => JSON.stringify({ key: "k2", value: "v2", exists: true }),
+      });
+
+      await remoteClient.keyValue().get("k2");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://remote-cluster:8080/api/v1/kv/k2",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer ak_builder_key",
+          }),
+        })
+      );
+    });
+
+    it("should throw AtlasKVError on HTTP 401 Unauthorized without leaking secrets", async () => {
+      mockFetch.mockResolvedValueOnce({
+        status: 401,
+        text: async () => JSON.stringify({ detail: "Unauthorized" }),
+      });
+
+      const err = await client.keyValue().get("secure-key").catch((e) => e);
+      expect(err).toBeInstanceOf(AtlasKVError);
+      expect(err.statusCode).toBe(401);
+      expect(err.message).toContain("401 Unauthorized");
+    });
+
+    it("should throw AtlasKVError on HTTP 403 Forbidden", async () => {
+      mockFetch.mockResolvedValueOnce({
+        status: 403,
+        text: async () => JSON.stringify({ detail: "Forbidden" }),
+      });
+
+      const err = await client.keyValue().get("admin-key").catch((e) => e);
+      expect(err).toBeInstanceOf(AtlasKVError);
+      expect(err.statusCode).toBe(403);
+      expect(err.message).toContain("403 Forbidden");
+    });
+  });
+
   describe("KeyValueApi", () => {
     it("should successfully PUT a key-value pair", async () => {
       const mockResponse = {
@@ -382,7 +454,12 @@ describe("AtlasKVClient & APIs Unit Tests", () => {
   });
 
   describe("WatchApi SSE Stream", () => {
-    it("should receive events via callbacks and asyncIterator", async () => {
+    it("should receive events via callbacks and asyncIterator with auth headers applied", async () => {
+      const authClient = new AtlasKVClient({
+        endpoint: "https://atlaskv.cloud.dev",
+        apiKey: "ak_stream_secret",
+      });
+
       const mockStream = {
         getReader() {
           let callCount = 0;
@@ -409,13 +486,22 @@ describe("AtlasKVClient & APIs Unit Tests", () => {
 
       const onEvent = vi.fn();
       const onConnected = vi.fn();
-      const session = client.watch().watch("testKey", {
+      const session = authClient.watch().watch("testKey", {
         onEvent,
         onConnected,
       });
 
       // Wait a moment for connection & stream parsing
       await new Promise((resolve) => setTimeout(resolve, 50));
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "https://atlaskv.cloud.dev/api/v1/watch/testKey",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: "Bearer ak_stream_secret",
+          }),
+        })
+      );
 
       expect(onConnected).toHaveBeenCalled();
       expect(onEvent).toHaveBeenCalledWith({ type: "PUT", key: "testKey", value: "val" });

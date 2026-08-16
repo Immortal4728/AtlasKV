@@ -5,6 +5,7 @@ import com.atlaskv.core.RaftRole;
 import com.atlaskv.server.api.NotLeaderException;
 import com.atlaskv.server.lifecycle.NodeLifecycleManager;
 import com.atlaskv.server.metrics.WatchMetrics;
+import com.atlaskv.server.security.NamespaceResolver;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,6 +23,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Thread-safe manager for the key and prefix watchers using Server-Sent Events (SSE).
+ * Delivers mutations scoped to the subscriber's logical namespace.
  */
 @Component
 public final class WatchManager implements KeyValueStateMachine.Listener, AutoCloseable {
@@ -59,13 +61,25 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
     }
 
     /**
-     * Registers a new watch subscription.
+     * Registers a new watch subscription without explicit namespace (root).
      *
      * @param target   key or prefix to watch
      * @param isPrefix true if prefix watch, false for single key
      * @return the SseEmitter for client response
      */
     public SseEmitter register(String target, boolean isPrefix) {
+        return register(target, isPrefix, "");
+    }
+
+    /**
+     * Registers a new watch subscription scoped to a logical namespace.
+     *
+     * @param target    storage key or prefix to watch
+     * @param isPrefix  true if prefix watch, false for single key
+     * @param namespace caller's namespace (empty string for root)
+     * @return the SseEmitter for client response
+     */
+    public SseEmitter register(String target, boolean isPrefix, String namespace) {
         RaftNode node = lifecycleManager.raftNode();
         if (node == null) {
             throw new NotLeaderException("Node is not running");
@@ -75,7 +89,7 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
         }
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        WatchSubscription subscription = new WatchSubscription(target, isPrefix, emitter);
+        WatchSubscription subscription = new WatchSubscription(target, isPrefix, namespace != null ? namespace : "", emitter);
 
         emitter.onCompletion(() -> removeSubscription(subscription));
         emitter.onTimeout(() -> removeSubscription(subscription));
@@ -93,16 +107,18 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
             removeSubscription(subscription);
         }
 
-        LOG.info("Registered watcher for {} [prefix={}], active watchers: {}", target, isPrefix, subscriptions.size());
+        LOG.info("Registered watcher for {} [prefix={}, namespace={}], active watchers: {}",
+                target, isPrefix, namespace, subscriptions.size());
         return emitter;
     }
 
     @Override
-    public void onEvent(String type, String key, String value) {
-        WatchEvent event = new WatchEvent(type, key, value);
+    public void onEvent(String type, String storageKey, String value) {
         for (WatchSubscription sub : subscriptions) {
-            if (sub.matches(key)) {
+            if (sub.matches(storageKey)) {
                 try {
+                    String clientKey = NamespaceResolver.toClientKey(storageKey, sub.namespace());
+                    WatchEvent event = new WatchEvent(type, clientKey, value);
                     sub.emitter().send(SseEmitter.event()
                             .name("message")
                             .data(event));
@@ -155,8 +171,8 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
         for (WatchSubscription sub : subscriptions) {
             try {
                 sub.emitter().send(SseEmitter.event()
-                        .name("error")
-                        .data(reason));
+                    .name("error")
+                    .data(reason));
                 sub.emitter().complete();
             } catch (IOException | RuntimeException ignored) {
             }

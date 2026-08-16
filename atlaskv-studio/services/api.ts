@@ -13,6 +13,7 @@ import type {
   RevisionResponse,
   AddMemberRequest,
   HealthResponse,
+  AuthInfoResponse,
 } from '@/types/api';
 
 const DEFAULT_BASE_URL = '';
@@ -23,6 +24,60 @@ export function getSavedBaseUrl(): string {
     return localStorage.getItem('atlaskv-server-url') ?? DEFAULT_BASE_URL;
   }
   return DEFAULT_BASE_URL;
+}
+
+export function setSavedBaseUrl(url: string): void {
+  if (typeof window !== 'undefined') {
+    const trimmed = url.trim().replace(/\/+$/, '');
+    if (trimmed) {
+      localStorage.setItem('atlaskv-server-url', trimmed);
+    } else {
+      localStorage.removeItem('atlaskv-server-url');
+    }
+  }
+}
+
+export function getSavedApiKey(): string {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('atlaskv-api-key') ?? '';
+  }
+  return '';
+}
+
+export function setSavedApiKey(key: string): void {
+  if (typeof window !== 'undefined') {
+    const trimmed = key.trim();
+    if (trimmed) {
+      localStorage.setItem('atlaskv-api-key', trimmed);
+    } else {
+      localStorage.removeItem('atlaskv-api-key');
+    }
+  }
+}
+
+export function getSavedAdminNamespace(): string {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('atlaskv-admin-namespace') ?? '';
+  }
+  return '';
+}
+
+export function setSavedAdminNamespace(namespace: string): void {
+  if (typeof window !== 'undefined') {
+    const trimmed = namespace.trim();
+    if (trimmed) {
+      localStorage.setItem('atlaskv-admin-namespace', trimmed);
+    } else {
+      localStorage.removeItem('atlaskv-admin-namespace');
+    }
+  }
+}
+
+export function clearSavedCredentials(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('atlaskv-api-key');
+    localStorage.removeItem('atlaskv-admin-namespace');
+  }
 }
 
 export class ApiError extends Error {
@@ -61,8 +116,32 @@ httpClient.interceptors.request.use((config) => {
   if (baseUrl && !config.url?.startsWith('http')) {
     config.baseURL = baseUrl;
   }
+
+  const apiKey = getSavedApiKey();
+  if (apiKey && !config.headers.Authorization) {
+    config.headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const adminNamespace = getSavedAdminNamespace();
+  if (adminNamespace && !config.headers['X-Namespace']) {
+    config.headers['X-Namespace'] = adminNamespace;
+  }
+
   return config;
 });
+
+function cleanKeyPath(key: string): string {
+  if (!key) return '';
+  const trimmed = key.trim();
+  return trimmed.startsWith('/') ? trimmed.slice(1) : trimmed;
+}
+
+function sanitizeErrorMessage(msg: string): string {
+  if (!msg) return 'Unknown error';
+  return msg
+    .replace(/Bearer\s+[A-Za-z0-9_\-\.]+/gi, 'Bearer [REDACTED]')
+    .replace(/(?:apiKey|token)=[A-Za-z0-9_\-\.]+/gi, 'apiKey=[REDACTED]');
+}
 
 httpClient.interceptors.response.use(
   (response) => response,
@@ -79,11 +158,28 @@ httpClient.interceptors.response.use(
         );
       }
 
+      // Check if data is an HTML document or raw non-JSON string
+      let message: string;
+      if (typeof data === 'string') {
+        if (data.trim().startsWith('<') || data.includes('<html')) {
+          message = `HTTP ${status} ${error.response.statusText || 'Bad Request'}`;
+        } else {
+          message = data.length > 200 ? `HTTP ${status} ${error.response.statusText || 'Error'}` : data;
+        }
+      } else if (data && typeof data === 'object') {
+        message = data.detail || data.message || data.error || `HTTP ${status} ${error.response.statusText || 'Error'}`;
+      } else {
+        message = error.message || `HTTP ${status} ${error.response.statusText || 'Error'}`;
+      }
+
+      // Sanitize any accidentally leaked tokens/keys from message
+      message = sanitizeErrorMessage(message);
+
       throw new ApiError(
         status,
         error.response.statusText,
-        typeof data === 'string' ? data : data?.message || error.message,
-        data
+        message,
+        typeof data === 'object' ? data : undefined
       );
     } else if (error.request) {
       throw new ApiError(0, 'Network Error', 'Network error or cluster unreachable');
@@ -123,14 +219,16 @@ export const ClusterApi = {
 // ─── Key-Value API ───────────────────────────────────────────────────────────
 export const KeyValueApi = {
   async get(key: string, linearizable = true): Promise<KeyValueResponse> {
+    const cleanKey = cleanKeyPath(key);
     const res = await httpClient.get<KeyValueResponse>(
-      `/api/v1/kv/${encodeURIComponent(key)}?linearizable=${linearizable}`
+      `/api/v1/kv/${cleanKey}?linearizable=${linearizable}`
     );
     return res.data;
   },
 
   async put(key: string, value: string, ttl?: string, leaseId?: string): Promise<KeyValueResponse> {
-    const res = await httpClient.post<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`, {
+    const cleanKey = cleanKeyPath(key);
+    const res = await httpClient.post<KeyValueResponse>(`/api/v1/kv/${cleanKey}`, {
       value,
       ttl: ttl || null,
       leaseId: leaseId || null,
@@ -139,15 +237,17 @@ export const KeyValueApi = {
   },
 
   async casPut(key: string, value: string, expectedVersion: number): Promise<KeyValueResponse> {
+    const cleanKey = cleanKeyPath(key);
     const res = await httpClient.put<KeyValueResponse>(
-      `/api/v1/kv/${encodeURIComponent(key)}?expectedVersion=${expectedVersion}`,
+      `/api/v1/kv/${cleanKey}?expectedVersion=${expectedVersion}`,
       { value }
     );
     return res.data;
   },
 
   async delete(key: string): Promise<KeyValueResponse> {
-    const res = await httpClient.delete<KeyValueResponse>(`/api/v1/kv/${encodeURIComponent(key)}`);
+    const cleanKey = cleanKeyPath(key);
+    const res = await httpClient.delete<KeyValueResponse>(`/api/v1/kv/${cleanKey}`);
     return res.data;
   },
 };
@@ -155,8 +255,9 @@ export const KeyValueApi = {
 // ─── Prefix API ──────────────────────────────────────────────────────────────
 export const PrefixApi = {
   async query(prefix: string, offset = 0, limit = 100): Promise<PrefixQueryResponse> {
+    const cleanPrefix = cleanKeyPath(prefix);
     const res = await httpClient.get<PrefixQueryResponse>(
-      `/api/v1/kv/prefix/${encodeURIComponent(prefix)}?offset=${offset}&limit=${limit}`
+      `/api/v1/kv/prefix/${cleanPrefix}?offset=${offset}&limit=${limit}`
     );
     return res.data;
   },
@@ -195,13 +296,15 @@ export const MetricsApi = {
 // ─── History API ─────────────────────────────────────────────────────────────
 export const HistoryApi = {
   async getHistory(key: string): Promise<RevisionResponse> {
-    const res = await httpClient.get<RevisionResponse>(`/api/v1/kv/${encodeURIComponent(key)}/history`);
+    const cleanKey = cleanKeyPath(key);
+    const res = await httpClient.get<RevisionResponse>(`/api/v1/kv/${cleanKey}/history`);
     return res.data;
   },
 
   async rollback(key: string, revision: number): Promise<KeyValueResponse> {
+    const cleanKey = cleanKeyPath(key);
     const res = await httpClient.post<KeyValueResponse>(
-      `/api/v1/kv/${encodeURIComponent(key)}/rollback/${revision}`
+      `/api/v1/kv/${cleanKey}/rollback/${revision}`
     );
     return res.data;
   },
@@ -211,6 +314,14 @@ export const HistoryApi = {
 export const HealthApi = {
   async getHealth(): Promise<HealthResponse> {
     const res = await httpClient.get<HealthResponse>('/actuator/health');
+    return res.data;
+  },
+};
+
+// ─── Auth API ────────────────────────────────────────────────────────────────
+export const AuthApi = {
+  async getAuthInfo(): Promise<AuthInfoResponse> {
+    const res = await httpClient.get<AuthInfoResponse>('/api/v1/auth/me');
     return res.data;
   },
 };
@@ -226,3 +337,5 @@ export const getValue = KeyValueApi.get;
 export const putValue = KeyValueApi.put;
 export const deleteValue = KeyValueApi.delete;
 export const getHealth = HealthApi.getHealth;
+export const getAuthInfo = AuthApi.getAuthInfo;
+

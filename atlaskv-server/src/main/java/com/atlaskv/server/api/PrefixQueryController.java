@@ -8,11 +8,13 @@ import com.atlaskv.server.api.dto.PrefixQueryResponse;
 import com.atlaskv.server.api.dto.RevisionResponse;
 import com.atlaskv.server.lifecycle.NodeLifecycleManager;
 import com.atlaskv.server.metrics.PrefixMetrics;
+import com.atlaskv.server.security.NamespaceResolver;
 import com.atlaskv.server.statemachine.KeyMetadata;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 /**
  * REST controller for prefix-based key-value queries.
  * Supports strongly consistent (linearizable) reads via Raft ReadIndex.
+ * Scans are scoped to the caller's logical namespace.
  */
 @RestController
 @RequestMapping("/api/v1/kv")
@@ -57,22 +60,23 @@ public class PrefixQueryController {
     }
 
     /**
-     * Scans all keys matching the given prefix.
+     * Scans all keys matching the given prefix within the caller's namespace.
      *
      * @param prefix          the key prefix to match
      * @param limit           maximum number of entries to return
      * @param offset          pagination offset
      * @param sort            sort order (asc or desc)
      * @param includeMetadata whether to include version/timestamps
+     * @param includeHistory  whether to include historical revisions
      * @param linearizable    whether to perform linearizable read
+     * @param request         the HTTP request
      * @return paginated prefix query response
      */
-    @GetMapping("/prefix/{prefix}/**")
+    @GetMapping({"/prefix", "/prefix/", "/prefix/{prefix}", "/prefix/{prefix}/**"})
     @Operation(summary = "Query keys by prefix",
-            description = "Returns all key-value pairs matching the prefix. "
-                    + "Supports pagination, sorting, and optional metadata")
+            description = "Returns all key-value pairs matching the prefix within the caller's namespace.")
     public ResponseEntity<PrefixQueryResponse> queryByPrefix(
-            @PathVariable
+            @PathVariable(name = "prefix", required = false)
             @Parameter(description = "Key prefix to match")
             String prefix,
             @RequestParam(defaultValue = "100")
@@ -93,12 +97,12 @@ public class PrefixQueryController {
             @RequestParam(name = "linearizable", defaultValue = "true")
             @Parameter(description = "Linearizable ReadIndex read")
             boolean linearizable,
-            jakarta.servlet.http.HttpServletRequest request) {
+            HttpServletRequest request) {
 
-        // Reconstruct the full prefix from the path
-        String fullPrefix = extractFullPrefix(request);
+        String clientPrefix = extractFullPrefix(request);
+        String namespace = NamespaceResolver.resolveNamespace(request);
+        String storagePrefix = NamespaceResolver.toStoragePrefix(clientPrefix, namespace);
 
-        // Clamp limit
         int clampedLimit = Math.max(1, Math.min(limit, MAX_LIMIT));
         int clampedOffset = Math.max(0, offset);
 
@@ -108,9 +112,9 @@ public class PrefixQueryController {
             waitForReadIndex();
         }
 
-        // Perform prefix scan
+        // Perform prefix scan with the namespaced storage prefix
         List<Map.Entry<String, String>> allMatches =
-                stateMachine.getByPrefix(fullPrefix);
+                stateMachine.getByPrefix(storagePrefix);
 
         // Sort
         if ("desc".equalsIgnoreCase(sort)) {
@@ -127,63 +131,70 @@ public class PrefixQueryController {
         List<Map.Entry<String, String>> page =
                 allMatches.subList(fromIndex, toIndex);
 
-        // Build entries
+        // Build entries, converting storage keys back to client-facing keys
         long now = System.currentTimeMillis();
         List<PrefixEntry> entries = new ArrayList<>(page.size());
         for (Map.Entry<String, String> e : page) {
-            String key = e.getKey();
+            String storageKey = e.getKey();
+            String clientKey = NamespaceResolver.toClientKey(storageKey, namespace);
             String value = e.getValue();
 
             Long version = null;
             Long createdAt = null;
             Long updatedAt = null;
             Long ttlRemaining = null;
-            String leaseId = null;
+            String clientLeaseId = null;
             List<RevisionResponse> histList = null;
 
             if (includeMetadata) {
-                KeyMetadata meta = stateMachine.metadata().get(key);
+                KeyMetadata meta = stateMachine.metadata().get(storageKey);
                 if (meta != null) {
                     version = meta.version();
                     createdAt = meta.createdAt();
                     updatedAt = meta.updatedAt();
                 }
-                Long expiry = stateMachine.keyTtls().get(key);
+                Long expiry = stateMachine.keyTtls().get(storageKey);
                 if (expiry != null) {
                     long remaining = expiry - now;
                     ttlRemaining = remaining > 0 ? remaining : 0;
                 }
-                leaseId = stateMachine.keyToLease().get(key);
+                String storageLeaseId = stateMachine.keyToLease().get(storageKey);
+                if (storageLeaseId != null) {
+                    clientLeaseId = NamespaceResolver.toClientLeaseId(storageLeaseId, namespace);
+                }
             }
 
             if (includeHistory) {
-                List<com.atlaskv.server.statemachine.KeyRevision> revs = stateMachine.history().get(key);
+                List<com.atlaskv.server.statemachine.KeyRevision> revs = stateMachine.history().get(storageKey);
                 if (revs != null) {
                     histList = new ArrayList<>();
                     for (com.atlaskv.server.statemachine.KeyRevision rev : revs) {
+                        String revClientLeaseId = rev.leaseId() != null
+                                ? NamespaceResolver.toClientLeaseId(rev.leaseId(), namespace)
+                                : null;
                         histList.add(new RevisionResponse(
                                 rev.revisionNumber(),
                                 rev.value(),
                                 rev.timestamp(),
                                 rev.operation(),
                                 rev.nodeId(),
-                                rev.leaseId(),
+                                revClientLeaseId,
                                 rev.ttl()
                         ));
                     }
                 }
             }
 
-            entries.add(new PrefixEntry(key, value,
+            entries.add(new PrefixEntry(clientKey, value,
                     version, createdAt, updatedAt,
-                    ttlRemaining, leaseId, histList));
+                    ttlRemaining, clientLeaseId, histList));
         }
 
         long latencyNs = System.nanoTime() - startNs;
         prefixMetrics.recordQuery(latencyNs, entries.size());
 
         PrefixQueryResponse response = new PrefixQueryResponse(
-                fullPrefix, entries, totalCount,
+                clientPrefix, entries, totalCount,
                 clampedOffset, clampedLimit);
         return ResponseEntity.ok(response);
     }
@@ -192,13 +203,20 @@ public class PrefixQueryController {
      * Extracts the full prefix from the request URI.
      * Handles slashes in the prefix path (e.g. config/database/).
      */
-    private String extractFullPrefix(
-            jakarta.servlet.http.HttpServletRequest request) {
+    private String extractFullPrefix(HttpServletRequest request) {
         String uri = request.getRequestURI();
-        String marker = "/api/v1/kv/prefix/";
+        String marker = "/api/v1/kv/prefix";
         int idx = uri.indexOf(marker);
         if (idx != -1) {
-            return uri.substring(idx + marker.length());
+            String sub = uri.substring(idx + marker.length());
+            if (sub.startsWith("/")) {
+                sub = sub.substring(1);
+            }
+            int queryIdx = sub.indexOf('?');
+            if (queryIdx != -1) {
+                sub = sub.substring(0, queryIdx);
+            }
+            return sub;
         }
         return "";
     }
@@ -206,12 +224,10 @@ public class PrefixQueryController {
     private void waitForReadIndex() {
         RaftNode node = requireLeader();
         CompletableFuture<Long> readIndexFuture = new CompletableFuture<>();
-        node.handleEvent(
-                new RaftEvent.ClientReadIndexEvent(readIndexFuture));
+        node.handleEvent(new RaftEvent.ClientReadIndexEvent(readIndexFuture));
 
         try {
-            readIndexFuture.get(
-                    READ_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            readIndexFuture.get(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS);
         } catch (TimeoutException e) {
             throw new CommandTimeoutException(
                     "ReadIndex timed out after "
@@ -236,21 +252,16 @@ public class PrefixQueryController {
             throw new NotLeaderException("Node is not running");
         }
         if (node.role() != RaftRole.LEADER) {
-            com.atlaskv.core.NodeId leaderNodeId =
-                    node.currentLeader();
-            String leaderId = leaderNodeId != null
-                    ? leaderNodeId.value() : null;
+            com.atlaskv.core.NodeId leaderNodeId = node.currentLeader();
+            String leaderId = leaderNodeId != null ? leaderNodeId.value() : null;
             java.net.InetSocketAddress leaderSocketAddr = null;
-            if (leaderNodeId != null
-                    && lifecycleManager.config() != null) {
-                leaderSocketAddr = lifecycleManager.config()
-                        .peerAddresses().get(leaderNodeId);
+            if (leaderNodeId != null && lifecycleManager.config() != null) {
+                leaderSocketAddr = lifecycleManager.config().peerAddresses().get(leaderNodeId);
             }
             String leaderAddress = NotLeaderException.resolveLeaderAddress(leaderNodeId, leaderSocketAddr);
             throw new NotLeaderException(
                     "This node is not the leader. Current leader: "
-                            + (leaderId != null
-                            ? leaderId : "unknown"),
+                            + (leaderId != null ? leaderId : "unknown"),
                     leaderId, leaderAddress);
         }
         return node;

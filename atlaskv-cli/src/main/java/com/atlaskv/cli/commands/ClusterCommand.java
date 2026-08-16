@@ -44,8 +44,7 @@ public final class ClusterCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 ClusterStatus s = client.cluster().status();
                 OutputFormatter.printHeader("Cluster Status");
                 OutputFormatter.printField("Node ID", s.nodeId());
@@ -78,8 +77,7 @@ public final class ClusterCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 String leader = client.cluster().leader();
                 if (leader != null) {
                     OutputFormatter.printSuccess("Leader: " + leader);
@@ -104,8 +102,7 @@ public final class ClusterCommand implements Runnable {
         @Override
         public void run() {
             CliConfig config = CliConfig.load();
-            try (AtlasKVClient client = ClientFactory.create(
-                    config, conn.getHost(), conn.getPort())) {
+            try (AtlasKVClient client = ClientFactory.create(config, conn)) {
                 List<String> members = client.cluster().members();
                 if (members.isEmpty()) {
                     OutputFormatter.printInfo("No members found");

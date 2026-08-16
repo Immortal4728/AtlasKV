@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { PageHeader } from '@/components/ui/page-header';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import { usePrefix, usePutValue, useCasPutValue, useDeleteValue } from '@/hooks/use-kv';
 import { ConflictError } from '@/services/api';
 import { toast } from 'sonner';
@@ -185,9 +186,10 @@ export default function KeysPage() {
       {/* Header */}
       <PageHeader
         title="Key Explorer"
-        description="View and edit key-value pairs."
+        description="View, create, and manage key-value pairs in the active namespace."
         icon={KeyRound}
         iconColor="text-emerald-400"
+        badge={<NamespaceBadge showSwitcher={false} />}
         actions={
           <>
             <Button
@@ -420,39 +422,39 @@ export default function KeysPage() {
 
       {/* Create Key Dialog */}
       <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
+        <DialogContent className="bg-card dark:bg-[var(--surface-2)] backdrop-blur-2xl border-border dark:border-[oklch(1_0_0/8%)] text-foreground max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-400">
+            <DialogTitle className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400">
               <Plus className="h-5 w-5" /> Create Key-Value
             </DialogTitle>
-            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
+            <DialogDescription className="text-muted-foreground text-xs">
               Store a key-value entry into the AtlasKV Raft state machine.
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono break-all">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-4 py-2 text-xs">
             <div className="space-y-1.5">
-              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">Key</label>
+              <label className="font-semibold text-foreground/80 font-mono text-[11px]">Key</label>
               <Input
                 placeholder="e.g. app/config/theme"
                 value={inputKey}
                 onChange={(e) => setInputKey(e.target.value)}
-                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
+                className="bg-background dark:bg-[var(--surface-0)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-foreground placeholder:text-muted-foreground focus-visible:ring-emerald-500/30"
               />
             </div>
             <div className="space-y-1.5">
-              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">Value</label>
+              <label className="font-semibold text-foreground/80 font-mono text-[11px]">Value</label>
               <Input
                 placeholder="e.g. dark"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
+                className="bg-background dark:bg-[var(--surface-0)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-foreground placeholder:text-muted-foreground focus-visible:ring-emerald-500/30"
               />
             </div>
           </div>
@@ -461,7 +463,7 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setCreateDialogOpen(false)}
-              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
+              className="border-border dark:border-[oklch(1_0_0/8%)] text-muted-foreground hover:bg-muted text-xs rounded-lg"
             >
               Cancel
             </Button>
@@ -478,42 +480,42 @@ export default function KeysPage() {
 
       {/* Edit / CAS Key Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
+        <DialogContent className="bg-card dark:bg-[var(--surface-2)] backdrop-blur-2xl border-border dark:border-[oklch(1_0_0/8%)] text-foreground max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-emerald-400">
+            <DialogTitle className="flex items-center gap-2 text-emerald-500 dark:text-emerald-400">
               <Edit2 className="h-5 w-5" /> Edit Key: {selectedKey?.key}
             </DialogTitle>
-            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
+            <DialogDescription className="text-muted-foreground text-xs">
               Perform a direct update or Compare-And-Swap (CAS) transaction.
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono break-all">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-4 py-2 text-xs">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-[var(--surface-0)] border border-[oklch(1_0_0/8%)]">
-              <span className="font-mono text-[oklch(1_0_0/50%)]">Expected Version: v{selectedKey?.version}</span>
-              <label className="flex items-center gap-2 font-mono text-xs text-emerald-400 cursor-pointer">
+            <div className="flex items-center justify-between p-2.5 rounded-lg bg-muted/50 dark:bg-[var(--surface-0)] border border-border dark:border-[oklch(1_0_0/8%)]">
+              <span className="font-mono text-muted-foreground">Expected Version: v{selectedKey?.version}</span>
+              <label className="flex items-center gap-2 font-mono text-xs text-emerald-500 dark:text-emerald-400 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isCasMode}
                   onChange={(e) => setIsCasMode(e.target.checked)}
-                  className="rounded bg-[var(--surface-0)] border-[oklch(1_0_0/15%)] text-emerald-500"
+                  className="rounded bg-background dark:bg-[var(--surface-0)] border-border dark:border-[oklch(1_0_0/15%)] text-emerald-500"
                 />
                 Atomic CAS
               </label>
             </div>
 
             <div className="space-y-1.5">
-              <label className="font-semibold text-[oklch(1_0_0/55%)] font-mono text-[11px]">New Value</label>
+              <label className="font-semibold text-foreground/80 font-mono text-[11px]">New Value</label>
               <Input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="bg-[var(--surface-0)] border-[oklch(1_0_0/8%)] text-xs font-mono text-[oklch(1_0_0/80%)] focus-visible:ring-emerald-500/30"
+                className="bg-background dark:bg-[var(--surface-0)] border-border dark:border-[oklch(1_0_0/8%)] text-xs font-mono text-foreground placeholder:text-muted-foreground focus-visible:ring-emerald-500/30"
               />
             </div>
           </div>
@@ -522,7 +524,7 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setEditDialogOpen(false)}
-              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
+              className="border-border dark:border-[oklch(1_0_0/8%)] text-muted-foreground hover:bg-muted text-xs rounded-lg"
             >
               Cancel
             </Button>
@@ -539,18 +541,18 @@ export default function KeysPage() {
 
       {/* Delete Key Dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent className="bg-[var(--surface-2)] backdrop-blur-2xl border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/85%)] max-w-md shadow-2xl shadow-black/50 rounded-xl">
+        <DialogContent className="bg-card dark:bg-[var(--surface-2)] backdrop-blur-2xl border-border dark:border-[oklch(1_0_0/8%)] text-foreground max-w-md shadow-2xl shadow-black/50 rounded-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-rose-400">
+            <DialogTitle className="flex items-center gap-2 text-rose-500 dark:text-rose-400">
               <Trash2 className="h-5 w-5" /> Delete Key
             </DialogTitle>
-            <DialogDescription className="text-[oklch(1_0_0/35%)] text-xs">
-              Are you sure you want to delete <span className="font-mono text-[oklch(1_0_0/65%)]">{selectedKey?.key}</span>?
+            <DialogDescription className="text-muted-foreground text-xs">
+              Are you sure you want to delete <span className="font-mono font-medium text-foreground">{selectedKey?.key}</span>?
             </DialogDescription>
           </DialogHeader>
 
           {errorMsg && (
-            <div className="p-3 rounded-lg bg-rose-500/8 border border-rose-500/15 text-rose-400 text-xs font-mono">
+            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-mono break-all">
               {errorMsg}
             </div>
           )}
@@ -559,7 +561,7 @@ export default function KeysPage() {
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
-              className="border-[oklch(1_0_0/8%)] text-[oklch(1_0_0/50%)] hover:bg-[oklch(1_0_0/4%)] text-xs rounded-lg"
+              className="border-border dark:border-[oklch(1_0_0/8%)] text-muted-foreground hover:bg-muted text-xs rounded-lg"
             >
               Cancel
             </Button>

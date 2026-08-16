@@ -41,20 +41,38 @@ public final class AtlasKVClient implements AutoCloseable {
     private volatile URI activeBaseUri;
 
     /**
-     * Constructs an AtlasKVClient instance.
+     * Constructs an AtlasKVClient instance using a base URI.
+     *
+     * @param baseUri        base endpoint URI
+     * @param timeout        request timeout
+     * @param retryPolicy    retry policy
+     * @param authentication authentication credentials
      */
-    AtlasKVClient(String host, int port, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
+    AtlasKVClient(URI baseUri, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
         this.timeout = timeout;
         this.retryPolicy = retryPolicy;
         this.authentication = authentication;
         this.connectionPool = new ConnectionPool(timeout);
-        this.activeBaseUri = URI.create("http://" + host + ":" + port);
+        this.activeBaseUri = baseUri;
 
         this.keyValueApi = new KeyValueApi(this);
         this.watchApi = new WatchApi(this);
         this.leaseApi = new LeaseApi(this);
         this.historyApi = new HistoryApi(this);
         this.clusterApi = new ClusterApi(this);
+    }
+
+    /**
+     * Constructs an AtlasKVClient instance using host and port.
+     *
+     * @param host           server host
+     * @param port           server port
+     * @param timeout        request timeout
+     * @param retryPolicy    retry policy
+     * @param authentication authentication credentials
+     */
+    AtlasKVClient(String host, int port, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
+        this(URI.create("http://" + host + ":" + port), timeout, retryPolicy, authentication);
     }
 
     /**
@@ -94,6 +112,10 @@ public final class AtlasKVClient implements AutoCloseable {
         return activeBaseUri;
     }
 
+    public Authentication authentication() {
+        return authentication;
+    }
+
     public ConnectionPool connectionPool() {
         return connectionPool;
     }
@@ -110,6 +132,11 @@ public final class AtlasKVClient implements AutoCloseable {
 
     /**
      * Executes an HTTP request with automatic retry, backoff, and leader redirection.
+     *
+     * @param requestBuilder the HTTP request builder
+     * @param parser         the response parser
+     * @param <T>            response type
+     * @return parsed response
      */
     public <T> T execute(HttpRequest.Builder requestBuilder, ResponseParser<T> parser) {
         int attempt = 0;
@@ -117,22 +144,30 @@ public final class AtlasKVClient implements AutoCloseable {
         HttpRequest originalRequest = requestBuilder.build();
 
         while (true) {
-            URI targetUri = activeBaseUri.resolve(originalRequest.uri().getPath() 
-                    + (originalRequest.uri().getRawQuery() != null ? "?" + originalRequest.uri().getRawQuery() : ""));
-            
+            String rawPath = originalRequest.uri().getPath();
+            String query = originalRequest.uri().getRawQuery();
+            String fullPath = (activeBaseUri.getPath() != null && !activeBaseUri.getPath().isEmpty()
+                    && !activeBaseUri.getPath().equals("/")
+                    ? activeBaseUri.getPath().replaceAll("/+$", "") : "")
+                    + (rawPath != null && rawPath.startsWith("/") ? rawPath : "/" + (rawPath != null ? rawPath : ""))
+                    + (query != null && !query.isBlank() ? "?" + query : "");
+
+            URI targetUri = URI.create(activeBaseUri.getScheme() + "://" + activeBaseUri.getAuthority() + fullPath);
+
             HttpRequest.Builder builderWithUri = HttpRequest.newBuilder()
                     .uri(targetUri)
                     .timeout(timeout);
-            
+
             // Re-copy headers and method
             originalRequest.headers().map().forEach((name, values) -> {
                 for (String val : values) {
                     builderWithUri.header(name, val);
                 }
             });
-            
+
             // Set method and body publisher
-            HttpRequest.BodyPublisher bodyPublisher = originalRequest.bodyPublisher().orElse(HttpRequest.BodyPublishers.noBody());
+            HttpRequest.BodyPublisher bodyPublisher = originalRequest.bodyPublisher()
+                    .orElse(HttpRequest.BodyPublishers.noBody());
             builderWithUri.method(originalRequest.method(), bodyPublisher);
 
             // Apply authentication
@@ -154,12 +189,16 @@ public final class AtlasKVClient implements AutoCloseable {
             } catch (NotLeaderException e) {
                 // If leader redirect info is available, redirect
                 if (e.getLeaderAddress() != null && attempt < retryPolicy.getMaxRetries()) {
-                    this.activeBaseUri = URI.create("http://" + e.getLeaderAddress());
+                    String leaderAddr = e.getLeaderAddress();
+                    if (!leaderAddr.startsWith("http://") && !leaderAddr.startsWith("https://")) {
+                        leaderAddr = activeBaseUri.getScheme() + "://" + leaderAddr;
+                    }
+                    this.activeBaseUri = URI.create(leaderAddr);
                     attempt++;
                     // Retry immediately on the new leader node
                     continue;
                 }
-                
+
                 throw e;
             } catch (ConflictException e) {
                 // CAS conflicts should fail immediately to let client application handle it
@@ -168,6 +207,10 @@ public final class AtlasKVClient implements AutoCloseable {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                     throw new AtlasKVException("Request interrupted", e);
+                }
+
+                if (e instanceof AtlasKVException) {
+                    throw (AtlasKVException) e;
                 }
 
                 boolean isSafe = retryPolicy.isSafeToRetry(request.method());
@@ -193,6 +236,11 @@ public final class AtlasKVClient implements AutoCloseable {
 
     /**
      * Executes an operation asynchronously via the connection pool's thread pool executor.
+     *
+     * @param requestBuilder the HTTP request builder
+     * @param parser         the response parser
+     * @param <T>            response type
+     * @return completable future of parsed response
      */
     public <T> CompletableFuture<T> executeAsync(HttpRequest.Builder requestBuilder, ResponseParser<T> parser) {
         return CompletableFuture.supplyAsync(() -> execute(requestBuilder, parser), connectionPool.executorService());
@@ -200,8 +248,15 @@ public final class AtlasKVClient implements AutoCloseable {
 
     private void handleErrorStatus(int status, String body) {
         if (status == 404) {
-            // Let the caller handle 404 where appropriate, otherwise throw
             return;
+        }
+
+        if (status == 401) {
+            throw new AtlasKVException("Server returned HTTP 401 Unauthorized: Invalid or missing API key", status, null);
+        }
+
+        if (status == 403) {
+            throw new AtlasKVException("Server returned HTTP 403 Forbidden: Insufficient permissions", status, null);
         }
 
         if (status == 409) {

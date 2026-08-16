@@ -56,13 +56,17 @@ export class HttpClient {
   private readonly authentication: AuthenticationApplyFn;
 
   constructor(
-    host: string,
+    endpointOrHost: string,
     port: number,
     timeoutMs: number,
     retryPolicy: RetryPolicy,
     authentication: AuthenticationApplyFn
   ) {
-    this.activeBaseUrl = `http://${host}:${port}`;
+    if (endpointOrHost.startsWith("http://") || endpointOrHost.startsWith("https://")) {
+      this.activeBaseUrl = endpointOrHost.replace(/\/+$/, "");
+    } else {
+      this.activeBaseUrl = `http://${endpointOrHost}:${port}`;
+    }
     this.timeoutMs = timeoutMs;
     this.retryPolicy = retryPolicy;
     this.authentication = authentication;
@@ -73,7 +77,11 @@ export class HttpClient {
   }
 
   public setActiveBaseUrl(url: string): void {
-    this.activeBaseUrl = url;
+    this.activeBaseUrl = url.replace(/\/+$/, "");
+  }
+
+  public applyAuth(headers: Record<string, string>): void {
+    this.authentication(headers);
   }
 
   public async execute<T>(options: RequestOptions): Promise<T> {
@@ -120,7 +128,11 @@ export class HttpClient {
 
         if (err instanceof NotLeaderError) {
           if (err.leaderAddress && attempt < this.retryPolicy.maxRetries) {
-            this.activeBaseUrl = `http://${err.leaderAddress}`;
+            const scheme = this.activeBaseUrl.startsWith("https://") ? "https://" : "http://";
+            const target = err.leaderAddress.startsWith("http://") || err.leaderAddress.startsWith("https://")
+              ? err.leaderAddress
+              : `${scheme}${err.leaderAddress}`;
+            this.activeBaseUrl = target.replace(/\/+$/, "");
             attempt++;
             continue;
           }
@@ -131,6 +143,10 @@ export class HttpClient {
           throw err;
         }
 
+        if (err instanceof AtlasKVError) {
+          throw err;
+        }
+
         // Check if timeout aborted
         const isTimeout = error.name === "AbortError" || error.message?.includes("timed out");
         const isSafe = this.retryPolicy.isSafeToRetry(method);
@@ -138,9 +154,6 @@ export class HttpClient {
         if (!isSafe || attempt >= this.retryPolicy.maxRetries) {
           if (isTimeout) {
             throw new TimeoutError("Request timed out or network error");
-          }
-          if (err instanceof AtlasKVError) {
-            throw err;
           }
           throw new AtlasKVError(`Request execution failed: ${error.message}`);
         }
@@ -154,6 +167,14 @@ export class HttpClient {
   }
 
   private async handleErrorStatus(status: number, body: string): Promise<never> {
+    if (status === 401) {
+      throw new AtlasKVError("Server returned HTTP 401 Unauthorized: Invalid or missing API key", 401);
+    }
+
+    if (status === 403) {
+      throw new AtlasKVError("Server returned HTTP 403 Forbidden: Insufficient permissions", 403);
+    }
+
     if (status === 409) {
       try {
         const details = JSON.parse(body);

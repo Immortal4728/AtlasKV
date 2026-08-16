@@ -36,8 +36,7 @@ public final class WatchCommand implements Runnable {
     @Override
     public void run() {
         CliConfig config = CliConfig.load();
-        AtlasKVClient client = ClientFactory.create(
-                config, conn.getHost(), conn.getPort());
+        AtlasKVClient client = ClientFactory.create(config, conn);
         CountDownLatch latch = new CountDownLatch(1);
 
         WatchListener listener = new WatchListener() {

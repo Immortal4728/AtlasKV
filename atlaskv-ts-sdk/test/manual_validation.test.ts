@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { AtlasKVClient, ConflictError } from "../src/index.js";
 
-describe("TypeScript SDK Manual Validation", () => {
+describe.skip("TypeScript SDK Manual Validation", () => {
   it("executes full end-to-end validation against running cluster", async () => {
     console.log("=== PART 2: TYPESCRIPT SDK MANUAL VALIDATION ===");
 

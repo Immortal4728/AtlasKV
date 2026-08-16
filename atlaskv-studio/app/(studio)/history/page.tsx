@@ -6,6 +6,7 @@ import { History, Search, GitBranch, Clock, RotateCcw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { PageHeader } from '@/components/ui/page-header';
+import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import { useHistory, useRollbackKey } from '@/hooks/use-history';
 
 export default function HistoryPage() {
@@ -35,9 +36,10 @@ export default function HistoryPage() {
       {/* Header */}
       <PageHeader
         title="Revision History"
-        description="View key version timeline."
+        description="Inspect key version timeline and perform rollback within the active namespace."
         icon={History}
         iconColor="text-indigo-400"
+        badge={<NamespaceBadge showSwitcher={false} />}
       />
 
       {/* Search Bar */}
