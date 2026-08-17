@@ -72,6 +72,18 @@ public final class KeyValueStateMachine implements StateMachine {
          * @param value mutated value
          */
         void onEvent(String type, String key, String value);
+
+        /**
+         * Invoked on a committed state change with version information.
+         *
+         * @param type    operation type
+         * @param key     mutated key
+         * @param value   mutated value
+         * @param version version of mutated key
+         */
+        default void onEvent(String type, String key, String value, Long version) {
+            onEvent(type, key, value);
+        }
     }
 
     /**
@@ -200,5 +212,9 @@ public final class KeyValueStateMachine implements StateMachine {
 
     List<Listener> getListeners() {
         return listeners;
+    }
+
+    RevisionManager getRevisionManager() {
+        return revisionManager;
     }
 }

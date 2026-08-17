@@ -85,7 +85,14 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
             throw new NotLeaderException("Node is not running");
         }
         if (node.role() != RaftRole.LEADER) {
-            throw new NotLeaderException("This node is not the leader. Cannot establish watch connection.");
+            com.atlaskv.core.NodeId leaderId = node.currentLeader();
+            String leaderAddr = null;
+            if (leaderId != null && lifecycleManager.config() != null) {
+                java.net.InetSocketAddress socketAddr = lifecycleManager.config().peerAddresses().get(leaderId);
+                leaderAddr = NotLeaderException.resolveLeaderAddress(leaderId, socketAddr);
+            }
+            throw new NotLeaderException("This node is not the leader. Cannot establish watch connection.",
+                    leaderId != null ? leaderId.value() : null, leaderAddr);
         }
 
         SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
@@ -113,12 +120,12 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
     }
 
     @Override
-    public void onEvent(String type, String storageKey, String value) {
+    public void onEvent(String type, String storageKey, String value, Long version) {
         for (WatchSubscription sub : subscriptions) {
             if (sub.matches(storageKey)) {
                 try {
                     String clientKey = NamespaceResolver.toClientKey(storageKey, sub.namespace());
-                    WatchEvent event = new WatchEvent(type, clientKey, value);
+                    WatchEvent event = new WatchEvent(type, clientKey, value, version);
                     sub.emitter().send(SseEmitter.event()
                             .name("message")
                             .data(event));
@@ -128,6 +135,11 @@ public final class WatchManager implements KeyValueStateMachine.Listener, AutoCl
                 }
             }
         }
+    }
+
+    @Override
+    public void onEvent(String type, String storageKey, String value) {
+        onEvent(type, storageKey, value, null);
     }
 
     private void removeSubscription(WatchSubscription sub) {

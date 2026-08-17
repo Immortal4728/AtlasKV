@@ -121,7 +121,7 @@ public final class RevisionManager {
         addRevision(key, nextVer, targetValue, "ROLLBACK", nodeId, targetLease, targetTtl);
 
         // Trigger watch events
-        StateMachineHelpers.notifyListeners(stateMachine, watchOp, key, watchValue);
+        StateMachineHelpers.notifyListeners(stateMachine, watchOp, key, watchValue, nextVer);
 
         return ("OK:" + key + ":" + nextVer).getBytes(StandardCharsets.UTF_8);
     }

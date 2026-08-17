@@ -79,6 +79,18 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles malformed or unreadable HTTP message exceptions.
+     */
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ProblemDetail handleNotReadable(org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+                HttpStatus.BAD_REQUEST, "Required request body is missing or malformed");
+        detail.setTitle("Malformed Request Body");
+        detail.setType(URI.create("https://atlaskv.dev/errors/bad-request"));
+        return detail;
+    }
+
+    /**
      * Handles configuration validation failures.
      *
      * @param ex the config validation exception
@@ -122,6 +134,22 @@ public class GlobalExceptionHandler {
                 HttpStatus.BAD_REQUEST, ex.getMessage());
         detail.setTitle("Invalid Argument");
         detail.setType(URI.create("https://atlaskv.dev/errors/invalid-argument"));
+        return detail;
+    }
+
+    /**
+     * Handles response status exceptions.
+     *
+     * @param ex the exception
+     * @return RFC 7807 problem detail
+     */
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ProblemDetail handleResponseStatusException(org.springframework.web.server.ResponseStatusException ex) {
+        HttpStatus status = HttpStatus.resolve(ex.getStatusCode().value());
+        ProblemDetail detail = ProblemDetail.forStatusAndDetail(
+                status != null ? status : HttpStatus.BAD_REQUEST,
+                ex.getReason() != null ? ex.getReason() : ex.getMessage());
+        detail.setTitle(status != null ? status.getReasonPhrase() : "Error");
         return detail;
     }
 

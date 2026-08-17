@@ -120,6 +120,25 @@ final class CliConfigTest {
     }
 
     @Test
+    void loadAndSaveNamespaceConfig(@TempDir Path tmpDir) throws IOException {
+        Path configFile = tmpDir.resolve("config.yml");
+        String yaml = """
+                endpoint: https://atlaskv.cloud.dev
+                namespace: tenant-gamma
+                """;
+        Files.writeString(configFile, yaml);
+
+        CliConfig config = CliConfig.load(configFile);
+        assertThat(config.getNamespace()).isEqualTo("tenant-gamma");
+
+        config.set("namespace", "tenant-delta");
+        config.save(configFile);
+
+        CliConfig reloaded = CliConfig.load(configFile);
+        assertThat(reloaded.getNamespace()).isEqualTo("tenant-delta");
+    }
+
+    @Test
     void configPathNotNull() {
         assertThat(CliConfig.configPath()).isNotNull();
         assertThat(CliConfig.configPath().toString()).contains(".atlaskv");

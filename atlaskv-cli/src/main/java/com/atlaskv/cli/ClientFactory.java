@@ -49,7 +49,7 @@ public final class ClientFactory {
         if (conn == null) {
             return create(config);
         }
-        return create(config, conn.getEndpoint(), conn.getHost(), conn.getPort(), conn.getApiKey());
+        return create(config, conn.getEndpoint(), conn.getHost(), conn.getPort(), conn.getApiKey(), conn.getNamespace());
     }
 
     /**
@@ -63,6 +63,21 @@ public final class ClientFactory {
      * @return configured client
      */
     public static AtlasKVClient create(CliConfig config, String endpoint, String host, Integer port, String apiKey) {
+        return create(config, endpoint, host, port, apiKey, null);
+    }
+
+    /**
+     * Creates an AtlasKVClient using full configuration overrides including namespace.
+     *
+     * @param config    CLI configuration
+     * @param endpoint  overridden endpoint URL
+     * @param host      overridden host
+     * @param port      overridden port
+     * @param apiKey    overridden API key
+     * @param namespace overridden namespace
+     * @return configured client
+     */
+    public static AtlasKVClient create(CliConfig config, String endpoint, String host, Integer port, String apiKey, String namespace) {
         AtlasKVClientBuilder builder = AtlasKVClient.builder()
                 .timeout(Duration.ofSeconds(config != null ? config.getTimeoutSeconds() : 5));
 
@@ -93,6 +108,14 @@ public final class ClientFactory {
             if (auth != null) {
                 builder.authentication(auth);
             }
+        }
+
+        String effectiveNamespace = (namespace != null && !namespace.isBlank())
+                ? namespace
+                : (config != null ? config.getNamespace() : null);
+
+        if (effectiveNamespace != null && !effectiveNamespace.isBlank()) {
+            builder.namespace(effectiveNamespace);
         }
 
         return builder.build();

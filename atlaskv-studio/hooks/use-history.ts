@@ -2,12 +2,22 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { HistoryApi } from '@/services/api';
+import { KeyRevisionResponse } from '@/types/api';
 
 export function useHistory(key: string, enabled = true) {
-  return useQuery({
+  return useQuery<KeyRevisionResponse[]>({
     queryKey: ['history', key],
-    queryFn: () => HistoryApi.getHistory(key),
-    enabled: enabled && !!key,
+    queryFn: async () => {
+      try {
+        return await HistoryApi.getHistory(key);
+      } catch (err: any) {
+        if (err?.response?.status === 404) {
+          return [];
+        }
+        throw err;
+      }
+    },
+    enabled: enabled && !!key.trim(),
     retry: 1,
   });
 }

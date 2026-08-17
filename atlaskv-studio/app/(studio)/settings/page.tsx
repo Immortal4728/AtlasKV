@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { useAuth } from '@/hooks/use-auth';
+import { normalizeAndValidateServerUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -35,6 +36,8 @@ export default function SettingsPage() {
     apiKey: currentApiKey,
     adminNamespace: currentAdminNs,
     serverUrl: currentServerUrl,
+    timeoutMs: currentTimeoutMs,
+    refreshIntervalSec: currentRefreshIntervalSec,
     isAdmin,
     isUser,
     activeNamespace,
@@ -45,6 +48,8 @@ export default function SettingsPage() {
     updateApiKey,
     updateAdminNamespace,
     updateServerUrl,
+    updateTimeoutMs,
+    updateRefreshIntervalSec,
     disconnect,
     refetch: refetchAuth,
   } = useAuth();
@@ -61,11 +66,22 @@ export default function SettingsPage() {
     setEndpoint(currentServerUrl);
     setApiKeyInput(currentApiKey);
     setAdminNsInput(currentAdminNs);
-  }, [currentServerUrl, currentApiKey, currentAdminNs]);
+    setTimeoutMs(currentTimeoutMs.toString());
+    setRefreshIntervalSec(currentRefreshIntervalSec.toString());
+  }, [currentServerUrl, currentApiKey, currentAdminNs, currentTimeoutMs, currentRefreshIntervalSec]);
 
   const handleSaveConnection = async () => {
-    updateServerUrl(endpoint);
+    const urlCheck = normalizeAndValidateServerUrl(endpoint);
+    if (!urlCheck.valid) {
+      toast.error(urlCheck.error || 'Invalid Server Base URL');
+      return;
+    }
+
+    updateServerUrl(urlCheck.normalized);
+    setEndpoint(urlCheck.normalized);
     updateApiKey(apiKeyInput);
+    updateTimeoutMs(timeoutMs);
+    updateRefreshIntervalSec(refreshIntervalSec);
     if (isAdmin) {
       updateAdminNamespace(adminNsInput);
     }
@@ -78,6 +94,8 @@ export default function SettingsPage() {
     disconnect();
     setApiKeyInput('');
     setAdminNsInput('');
+    setTimeoutMs('5000');
+    setRefreshIntervalSec('2');
     toast.info('API key and credentials cleared');
   };
 

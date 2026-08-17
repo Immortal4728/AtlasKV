@@ -11,6 +11,7 @@ import com.atlaskv.server.metrics.PrefixMetrics;
 import com.atlaskv.server.security.NamespaceResolver;
 import com.atlaskv.server.statemachine.KeyMetadata;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
+import com.atlaskv.server.statemachine.LeaseInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -117,8 +118,28 @@ public class PrefixQueryController {
         }
 
         // Perform prefix scan with the namespaced storage prefix
-        List<Map.Entry<String, String>> allMatches =
+        List<Map.Entry<String, String>> rawMatches =
                 stateMachine.getByPrefix(storagePrefix);
+
+        long now = System.currentTimeMillis();
+
+        // Filter out expired keys
+        List<Map.Entry<String, String>> allMatches = new ArrayList<>(rawMatches.size());
+        for (Map.Entry<String, String> entry : rawMatches) {
+            String storageKey = entry.getKey();
+            Long expiry = stateMachine.keyTtls().get(storageKey);
+            if (expiry != null && now > expiry) {
+                continue;
+            }
+            String storageLeaseId = stateMachine.keyToLease().get(storageKey);
+            if (storageLeaseId != null) {
+                LeaseInfo lease = stateMachine.leases().get(storageLeaseId);
+                if (lease == null || lease.status() != com.atlaskv.server.statemachine.LeaseStatus.ACTIVE || now > lease.expiryTimeMs()) {
+                    continue;
+                }
+            }
+            allMatches.add(entry);
+        }
 
         // Sort
         if ("desc".equalsIgnoreCase(sort)) {
@@ -136,7 +157,6 @@ public class PrefixQueryController {
                 allMatches.subList(fromIndex, toIndex);
 
         // Build entries, converting storage keys back to client-facing keys
-        long now = System.currentTimeMillis();
         List<PrefixEntry> entries = new ArrayList<>(page.size());
         for (Map.Entry<String, String> e : page) {
             String storageKey = e.getKey();
@@ -165,6 +185,14 @@ public class PrefixQueryController {
                 String storageLeaseId = stateMachine.keyToLease().get(storageKey);
                 if (storageLeaseId != null) {
                     clientLeaseId = NamespaceResolver.toClientLeaseId(storageLeaseId, namespace);
+                    LeaseInfo lease = stateMachine.leases().get(storageLeaseId);
+                    if (lease != null && lease.status() == com.atlaskv.server.statemachine.LeaseStatus.ACTIVE) {
+                        long leaseRemaining = lease.expiryTimeMs() - now;
+                        long effectiveLeaseRemaining = leaseRemaining > 0 ? leaseRemaining : 0;
+                        ttlRemaining = (ttlRemaining == null)
+                                ? effectiveLeaseRemaining
+                                : Math.min(ttlRemaining, effectiveLeaseRemaining);
+                    }
                 }
             }
 

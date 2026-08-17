@@ -17,10 +17,37 @@ export async function GET(request: NextRequest) {
     requestHeaders.set('authorization', `Bearer ${serverAuthToken}`);
   }
 
-  const upstreamRes = await fetch(targetUrl, {
+  let upstreamRes = await fetch(targetUrl, {
     headers: requestHeaders,
     cache: 'no-store',
   });
+
+  // If initial node is not leader (503 Service Unavailable), discover leader and connect to leader
+  if (upstreamRes.status === 503) {
+    try {
+      const leaderCheck = await fetch(`${backendUrl}/api/v1/cluster/leader`, {
+        headers: requestHeaders,
+        cache: 'no-store',
+      });
+      if (leaderCheck.ok) {
+        const leaderData = await leaderCheck.json();
+        if (leaderData.address) {
+          const leaderBase = leaderData.address.startsWith('http')
+            ? leaderData.address
+            : `http://${leaderData.address}`;
+          const retryRes = await fetch(`${leaderBase}${pathname}${search}`, {
+            headers: requestHeaders,
+            cache: 'no-store',
+          });
+          if (retryRes.ok) {
+            upstreamRes = retryRes;
+          }
+        }
+      }
+    } catch {
+      // Keep original upstream response if leader discovery fails
+    }
+  }
 
   if (!upstreamRes.ok) {
     return new Response(upstreamRes.body, {

@@ -28,6 +28,7 @@ public final class CliConfig {
     private int port;
     private int timeoutSeconds;
     private String apiKey;
+    private String namespace;
     private String authType;
     private String authToken;
     private String authUsername;
@@ -90,6 +91,9 @@ public final class CliConfig {
         if (data.containsKey("timeout") && data.get("timeout") != null) {
             this.timeoutSeconds = ((Number) data.get("timeout")).intValue();
         }
+        if (data.containsKey("namespace") && data.get("namespace") != null) {
+            this.namespace = String.valueOf(data.get("namespace"));
+        }
         if (data.containsKey("api-key") && data.get("api-key") != null) {
             this.apiKey = String.valueOf(data.get("api-key"));
             this.authToken = this.apiKey;
@@ -114,7 +118,7 @@ public final class CliConfig {
     /**
      * Updates a configuration property in-memory.
      *
-     * @param key   property key (e.g. endpoint, api-key, host, port, timeout)
+     * @param key   property key (e.g. endpoint, api-key, host, port, timeout, namespace)
      * @param value property value
      */
     public void set(String key, String value) {
@@ -132,6 +136,7 @@ public final class CliConfig {
             case "host" -> this.host = (value != null && !value.isBlank()) ? value.trim() : DEFAULT_HOST;
             case "port" -> this.port = (value != null && !value.isBlank()) ? Integer.parseInt(value.trim()) : DEFAULT_PORT;
             case "timeout" -> this.timeoutSeconds = (value != null && !value.isBlank()) ? Integer.parseInt(value.trim()) : DEFAULT_TIMEOUT;
+            case "namespace", "ns" -> this.namespace = (value != null && !value.isBlank()) ? value.trim() : null;
             case "auth-type" -> this.authType = value;
             case "username" -> this.authUsername = value;
             case "password" -> this.authPassword = value;
@@ -167,6 +172,9 @@ public final class CliConfig {
         data.put("host", host);
         data.put("port", port);
         data.put("timeout", timeoutSeconds);
+        if (namespace != null && !namespace.isBlank()) {
+            data.put("namespace", namespace);
+        }
 
         if (apiKey != null && !apiKey.isBlank()) {
             data.put("api-key", apiKey);
@@ -210,6 +218,10 @@ public final class CliConfig {
 
     public String getApiKey() {
         return apiKey != null ? apiKey : authToken;
+    }
+
+    public String getNamespace() {
+        return namespace;
     }
 
     public String getHost() {

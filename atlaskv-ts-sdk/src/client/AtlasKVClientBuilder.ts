@@ -13,6 +13,15 @@ export class AtlasKVClientBuilder {
   private _timeoutMs = 5000;
   private _retryPolicy = RetryPolicy.defaultPolicy();
   private _authentication = Authentication.none();
+  private _namespace?: string;
+
+  /**
+   * Sets the target namespace scope for multi-tenant isolation.
+   */
+  public namespace(namespace: string): this {
+    this._namespace = namespace;
+    return this;
+  }
 
   /**
    * Sets the remote endpoint URL of the AtlasKV server (e.g. "https://atlaskv.example.com" or "http://localhost:8081").
@@ -95,13 +104,14 @@ export class AtlasKVClientBuilder {
    * Builds and returns a new AtlasKVClient instance.
    */
   public build(): AtlasKVClient {
-    const target = this._endpoint || this._host;
-    return new AtlasKVClient(
-      target,
-      this._port,
-      this._timeoutMs,
-      this._retryPolicy,
-      this._authentication
-    );
+    return new AtlasKVClient({
+      endpoint: this._endpoint,
+      host: this._host,
+      port: this._port,
+      timeoutMs: this._timeoutMs,
+      retryPolicy: this._retryPolicy,
+      authentication: this._authentication,
+      namespace: this._namespace,
+    });
   }
 }

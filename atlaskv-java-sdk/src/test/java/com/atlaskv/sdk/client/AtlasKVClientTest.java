@@ -191,4 +191,27 @@ class AtlasKVClientTest {
                 .isInstanceOf(TimeoutException.class)
                 .hasMessageContaining("Request timed out");
     }
+
+    @Test
+    void testClientBuilderNamespaceHeaderPropagation() throws Exception {
+        AtlasKVClient nsClient = AtlasKVClient.builder()
+                .endpoint("http://localhost:8080")
+                .namespace("tenant-alpha")
+                .build();
+
+        assertThat(nsClient.namespace()).isEqualTo("tenant-alpha");
+        injectMockClient(nsClient, mockHttpClient);
+
+        when(mockResponse.statusCode()).thenReturn(200);
+        when(mockResponse.body()).thenReturn("{\"key\":\"k1\",\"value\":\"v1\",\"exists\":true}");
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class))).thenReturn(mockResponse);
+
+        nsClient.keyValue().get("k1");
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(mockHttpClient).send(captor.capture(), any(HttpResponse.BodyHandler.class));
+        HttpRequest req = captor.getValue();
+
+        assertThat(req.headers().firstValue("X-Namespace")).contains("tenant-alpha");
+    }
 }

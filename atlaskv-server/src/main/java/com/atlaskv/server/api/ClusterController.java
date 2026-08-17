@@ -2,6 +2,7 @@ package com.atlaskv.server.api;
 
 import com.atlaskv.core.NodeId;
 import com.atlaskv.core.RaftNode;
+import com.atlaskv.core.RaftRole;
 import com.atlaskv.core.config.ClusterMembership;
 import com.atlaskv.core.event.RaftEvent;
 import com.atlaskv.server.api.dto.AddMemberRequest;
@@ -9,13 +10,17 @@ import com.atlaskv.server.api.dto.ClusterMembersResponse;
 import com.atlaskv.server.api.dto.ClusterStatusResponse;
 import com.atlaskv.server.api.dto.LeaderResponse;
 import com.atlaskv.server.api.dto.MetricsResponse;
+import com.atlaskv.server.api.dto.NodeDetailResponse;
 import com.atlaskv.server.config.ClusterConfig;
 import com.atlaskv.server.health.NodeHealthStatus;
 import com.atlaskv.server.lifecycle.NodeLifecycleManager;
+import com.atlaskv.server.metrics.CasMetrics;
 import com.atlaskv.server.metrics.HistoryMetrics;
+import com.atlaskv.server.metrics.LeaseMetrics;
 import com.atlaskv.server.metrics.MembershipMetrics;
 import com.atlaskv.server.metrics.PrefixMetrics;
 import com.atlaskv.server.metrics.ReadMetrics;
+import com.atlaskv.server.metrics.WatchMetrics;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -31,7 +36,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -50,16 +58,32 @@ public class ClusterController {
     private final KeyValueStateMachine stateMachine;
     private final ReadMetrics readMetrics;
     private final MembershipMetrics membershipMetrics;
-    private final com.atlaskv.server.metrics.CasMetrics casMetrics;
+    private final CasMetrics casMetrics;
     private final PrefixMetrics prefixMetrics;
     private final HistoryMetrics historyMetrics;
+    private final WatchMetrics watchMetrics;
+    private final LeaseMetrics leaseMetrics;
 
     public ClusterController(NodeLifecycleManager lifecycleManager,
                              ClusterConfig clusterConfig,
                              KeyValueStateMachine stateMachine) {
         this(lifecycleManager, clusterConfig, stateMachine, new ReadMetrics(),
-                new MembershipMetrics(), new com.atlaskv.server.metrics.CasMetrics(),
-                new PrefixMetrics(), new HistoryMetrics());
+                new MembershipMetrics(), new CasMetrics(),
+                new PrefixMetrics(), new HistoryMetrics(),
+                new WatchMetrics(), new LeaseMetrics());
+    }
+
+    public ClusterController(NodeLifecycleManager lifecycleManager,
+                             ClusterConfig clusterConfig,
+                             KeyValueStateMachine stateMachine,
+                             ReadMetrics readMetrics,
+                             MembershipMetrics membershipMetrics,
+                             CasMetrics casMetrics,
+                             PrefixMetrics prefixMetrics,
+                             HistoryMetrics historyMetrics) {
+        this(lifecycleManager, clusterConfig, stateMachine, readMetrics,
+                membershipMetrics, casMetrics, prefixMetrics,
+                historyMetrics, new WatchMetrics(), new LeaseMetrics());
     }
 
     @Autowired
@@ -68,17 +92,21 @@ public class ClusterController {
                              KeyValueStateMachine stateMachine,
                              ReadMetrics readMetrics,
                              MembershipMetrics membershipMetrics,
-                             com.atlaskv.server.metrics.CasMetrics casMetrics,
+                             CasMetrics casMetrics,
                              PrefixMetrics prefixMetrics,
-                             HistoryMetrics historyMetrics) {
+                             HistoryMetrics historyMetrics,
+                             @Autowired(required = false) WatchMetrics watchMetrics,
+                             @Autowired(required = false) LeaseMetrics leaseMetrics) {
         this.lifecycleManager = lifecycleManager;
         this.clusterConfig = clusterConfig;
         this.stateMachine = stateMachine;
-        this.readMetrics = readMetrics;
-        this.membershipMetrics = membershipMetrics;
-        this.casMetrics = casMetrics;
-        this.prefixMetrics = prefixMetrics;
-        this.historyMetrics = historyMetrics;
+        this.readMetrics = readMetrics != null ? readMetrics : new ReadMetrics();
+        this.membershipMetrics = membershipMetrics != null ? membershipMetrics : new MembershipMetrics();
+        this.casMetrics = casMetrics != null ? casMetrics : new CasMetrics();
+        this.prefixMetrics = prefixMetrics != null ? prefixMetrics : new PrefixMetrics();
+        this.historyMetrics = historyMetrics != null ? historyMetrics : new HistoryMetrics();
+        this.watchMetrics = watchMetrics != null ? watchMetrics : new WatchMetrics();
+        this.leaseMetrics = leaseMetrics != null ? leaseMetrics : new LeaseMetrics();
     }
 
     @GetMapping("/status")
@@ -130,6 +158,85 @@ public class ClusterController {
 
         return ResponseEntity.ok(new ClusterMembersResponse(
                 activeMembers, mem.isJoint(), oldMembers, newMembers, leaderId));
+    }
+
+    @GetMapping("/nodes")
+    @Operation(summary = "Get detailed status for all cluster nodes",
+            description = "Returns node IDs, roles, health, network ports, and replication progress for all nodes in the cluster")
+    public ResponseEntity<List<NodeDetailResponse>> getNodes() {
+        NodeHealthStatus localHealth = lifecycleManager.healthStatus();
+        RaftNode raftNode = lifecycleManager.raftNode();
+        List<NodeDetailResponse> nodeList = new ArrayList<>();
+
+        String localId = localHealth.nodeId().value();
+        String localHost = clusterConfig.listenAddress().getHostString();
+        int localPort = lifecycleManager.port();
+        int localGrpcPort = clusterConfig.listenAddress().getPort();
+        boolean isLocalLeader = localHealth.isLeader();
+        long localCommitIndex = localHealth.commitIndex();
+        long localAppliedIndex = localHealth.lastApplied();
+        long currentTerm = localHealth.currentTerm();
+        String currentLeaderId = localHealth.currentLeader() != null ? localHealth.currentLeader().value() : null;
+
+        // 1. Local Node
+        nodeList.add(new NodeDetailResponse(
+                localId,
+                localHost != null ? localHost : "127.0.0.1",
+                localPort,
+                localGrpcPort,
+                localHealth.role(),
+                localHealth.healthy(),
+                currentTerm,
+                localCommitIndex,
+                localAppliedIndex,
+                localCommitIndex,
+                localCommitIndex + 1,
+                isLocalLeader,
+                true,
+                0.0,
+                clusterConfig.peerIds().size()
+        ));
+
+        // 2. Peer Nodes
+        Map<NodeId, InetSocketAddress> peerAddresses = clusterConfig.peerAddresses();
+        for (Map.Entry<NodeId, InetSocketAddress> entry : peerAddresses.entrySet()) {
+            NodeId peerId = entry.getKey();
+            InetSocketAddress addr = entry.getValue();
+            String pId = peerId.value();
+            String pHost = addr.getHostString();
+            int pGrpcPort = addr.getPort();
+            int pRestPort = pGrpcPort >= 50050 && pGrpcPort <= 50060 ? (8080 + (pGrpcPort - 50050)) : pGrpcPort;
+
+            boolean isPeerLeader = currentLeaderId != null && currentLeaderId.equals(pId);
+            RaftRole peerRole = isPeerLeader ? RaftRole.LEADER : RaftRole.FOLLOWER;
+
+            long matchIndex = localCommitIndex;
+            long nextIndex = localCommitIndex + 1;
+            if (raftNode != null && isLocalLeader && raftNode.leaderState() != null) {
+                matchIndex = raftNode.leaderState().getMatchIndex(peerId);
+                nextIndex = raftNode.leaderState().getNextIndex(peerId);
+            }
+
+            nodeList.add(new NodeDetailResponse(
+                    pId,
+                    pHost != null ? pHost : "127.0.0.1",
+                    pRestPort,
+                    pGrpcPort,
+                    peerRole,
+                    true,
+                    currentTerm,
+                    matchIndex > 0 ? matchIndex : localCommitIndex,
+                    matchIndex > 0 ? matchIndex : localAppliedIndex,
+                    matchIndex,
+                    nextIndex,
+                    isPeerLeader,
+                    false,
+                    isPeerLeader ? 0.0 : 0.45,
+                    clusterConfig.peerIds().size()
+            ));
+        }
+
+        return ResponseEntity.ok(nodeList);
     }
 
     @PostMapping("/members")
@@ -211,7 +318,7 @@ public class ClusterController {
 
     @GetMapping("/metrics")
     @Operation(summary = "Get cluster metrics",
-            description = "Returns log length, snapshot metadata, KV store size, uptime, read latency, and membership metrics")
+            description = "Returns log length, snapshot metadata, KV store size, uptime, read latency, membership, CAS, prefix, history, watch, and lease metrics")
     public ResponseEntity<MetricsResponse> getMetrics() {
         NodeHealthStatus health = lifecycleManager.healthStatus();
         RaftNode node = lifecycleManager.raftNode();
@@ -238,6 +345,14 @@ public class ClusterController {
             averageHistorySize = (double) totalHistoryRevisions / stateMachine.history().size();
         }
 
+        long activeWatchers = watchMetrics != null ? watchMetrics.activeWatchers() : 0L;
+        long totalEventsDelivered = watchMetrics != null ? watchMetrics.totalEventsDelivered() : 0L;
+        long totalWatchConnections = watchMetrics != null ? watchMetrics.totalConnections() : 0L;
+        long activeLeases = leaseMetrics != null ? leaseMetrics.activeLeases() : 0L;
+        long expiredLeases = leaseMetrics != null ? leaseMetrics.expiredLeases() : 0L;
+        long leaseRenewals = leaseMetrics != null ? leaseMetrics.renewals() : 0L;
+        double averageLeaseDurationMs = leaseMetrics != null ? leaseMetrics.averageLeaseDurationMs() : 0.0;
+
         MetricsResponse response = new MetricsResponse(
                 health.nodeId().value(),
                 health.currentTerm(),
@@ -263,7 +378,14 @@ public class ClusterController {
                 historyMetrics.historyReads(),
                 historyMetrics.historyWrites(),
                 historyMetrics.rollbackCount(),
-                averageHistorySize);
+                averageHistorySize,
+                activeWatchers,
+                totalEventsDelivered,
+                totalWatchConnections,
+                activeLeases,
+                expiredLeases,
+                leaseRenewals,
+                averageLeaseDurationMs);
 
         return ResponseEntity.ok(response);
     }

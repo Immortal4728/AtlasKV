@@ -16,6 +16,7 @@ export function usePrefix(prefix: string, offset = 0, limit = 100) {
   return useQuery({
     queryKey: ['kv', 'prefix', prefix, offset, limit],
     queryFn: () => PrefixApi.query(prefix, offset, limit),
+    refetchInterval: 3000,
     retry: 1,
   });
 }
@@ -28,6 +29,7 @@ export function usePutValue() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['kv', 'key', variables.key] });
       queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
       queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });
@@ -41,6 +43,7 @@ export function useCasPutValue() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['kv', 'key', variables.key] });
       queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
       queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });
@@ -53,6 +56,7 @@ export function useDeleteValue() {
     onSuccess: (_, key) => {
       queryClient.invalidateQueries({ queryKey: ['kv', 'key', key] });
       queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['leases'] });
       queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });

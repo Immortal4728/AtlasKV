@@ -30,6 +30,7 @@ public final class AtlasKVClient implements AutoCloseable {
     private final Duration timeout;
     private final RetryPolicy retryPolicy;
     private final Authentication authentication;
+    private final String namespace;
     private final ConnectionPool connectionPool;
 
     private final KeyValueApi keyValueApi;
@@ -41,17 +42,19 @@ public final class AtlasKVClient implements AutoCloseable {
     private volatile URI activeBaseUri;
 
     /**
-     * Constructs an AtlasKVClient instance using a base URI.
+     * Constructs an AtlasKVClient instance using a base URI and namespace.
      *
      * @param baseUri        base endpoint URI
      * @param timeout        request timeout
      * @param retryPolicy    retry policy
      * @param authentication authentication credentials
+     * @param namespace      target namespace
      */
-    AtlasKVClient(URI baseUri, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
+    AtlasKVClient(URI baseUri, Duration timeout, RetryPolicy retryPolicy, Authentication authentication, String namespace) {
         this.timeout = timeout;
         this.retryPolicy = retryPolicy;
         this.authentication = authentication;
+        this.namespace = namespace;
         this.connectionPool = new ConnectionPool(timeout);
         this.activeBaseUri = baseUri;
 
@@ -62,17 +65,12 @@ public final class AtlasKVClient implements AutoCloseable {
         this.clusterApi = new ClusterApi(this);
     }
 
-    /**
-     * Constructs an AtlasKVClient instance using host and port.
-     *
-     * @param host           server host
-     * @param port           server port
-     * @param timeout        request timeout
-     * @param retryPolicy    retry policy
-     * @param authentication authentication credentials
-     */
+    AtlasKVClient(URI baseUri, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
+        this(baseUri, timeout, retryPolicy, authentication, null);
+    }
+
     AtlasKVClient(String host, int port, Duration timeout, RetryPolicy retryPolicy, Authentication authentication) {
-        this(URI.create("http://" + host + ":" + port), timeout, retryPolicy, authentication);
+        this(URI.create("http://" + host + ":" + port), timeout, retryPolicy, authentication, null);
     }
 
     /**
@@ -106,6 +104,10 @@ public final class AtlasKVClient implements AutoCloseable {
 
     public Duration timeout() {
         return timeout;
+    }
+
+    public String namespace() {
+        return namespace;
     }
 
     public URI activeBaseUri() {
@@ -173,6 +175,11 @@ public final class AtlasKVClient implements AutoCloseable {
             // Apply authentication
             authentication.apply(builderWithUri);
 
+            // Apply namespace header if configured and not already present
+            if (namespace != null && !namespace.isBlank() && originalRequest.headers().firstValue("X-Namespace").isEmpty()) {
+                builderWithUri.header("X-Namespace", namespace);
+            }
+
             HttpRequest request = builderWithUri.build();
 
             try {
@@ -190,6 +197,10 @@ public final class AtlasKVClient implements AutoCloseable {
                 // If leader redirect info is available, redirect
                 if (e.getLeaderAddress() != null && attempt < retryPolicy.getMaxRetries()) {
                     String leaderAddr = e.getLeaderAddress();
+                    if (activeBaseUri != null && activeBaseUri.getHost() != null 
+                            && (activeBaseUri.getHost().equals("localhost") || activeBaseUri.getHost().equals("127.0.0.1"))) {
+                        leaderAddr = leaderAddr.replaceAll("atlaskv-node\\d+", "localhost");
+                    }
                     if (!leaderAddr.startsWith("http://") && !leaderAddr.startsWith("https://")) {
                         leaderAddr = activeBaseUri.getScheme() + "://" + leaderAddr;
                     }

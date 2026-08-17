@@ -12,4 +12,8 @@ public record LeaseRequest(
         String leaseId,
         @NotBlank(message = "TTL must not be blank")
         String ttl
-) {}
+) {
+    public LeaseRequest(String ttl) {
+        this(null, ttl);
+    }
+}

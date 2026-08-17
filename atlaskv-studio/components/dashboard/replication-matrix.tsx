@@ -1,65 +1,81 @@
 'use client';
 
 import React from 'react';
-import { Server, CheckCircle2, Shield, Activity, GitCommitHorizontal, Clock } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Server, CheckCircle2, AlertTriangle, XCircle, Shield } from 'lucide-react';
+import type { NodeDetail } from '@/types/api';
 
-interface NodeInfo {
-  id: string;
-  role: 'LEADER' | 'FOLLOWER' | 'CANDIDATE';
-  address: string;
-  logIndex: number;
-  commitIndex: number;
-  matchIndex: number;
-  lagMs: number;
-  health: 'HEALTHY' | 'SYNCING' | 'OFFLINE';
-  lastHeartbeat: string;
-}
-
-export function ReplicationMatrix({
-  leaderId = 'node1',
-  commitIndex = 45,
-  term = 3,
-}: {
+interface ReplicationMatrixProps {
+  nodes?: NodeDetail[];
   leaderId?: string;
   commitIndex?: number;
   term?: number;
-}) {
-  const nodes: NodeInfo[] = [
+}
+
+export function ReplicationMatrix({
+  nodes: propNodes,
+  leaderId = 'node1',
+  commitIndex = 0,
+  term = 0,
+}: ReplicationMatrixProps) {
+  // Default fallback if nodes query is still loading or unavailable
+  const fallbackNodes: NodeDetail[] = [
     {
       id: 'node1',
+      host: '127.0.0.1',
+      port: 8081,
+      grpcPort: 50051,
       role: leaderId === 'node1' ? 'LEADER' : 'FOLLOWER',
-      address: '127.0.0.1:8081',
-      logIndex: commitIndex,
-      commitIndex: commitIndex,
-      matchIndex: commitIndex,
-      lagMs: 0,
-      health: 'HEALTHY',
-      lastHeartbeat: '0ms ago',
+      healthy: true,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      matchIndex: commitIndex || 1,
+      nextIndex: (commitIndex || 1) + 1,
+      isLeader: leaderId === 'node1',
+      isLocal: true,
+      latencyMs: 0,
+      peers: 2,
     },
     {
       id: 'node2',
+      host: '127.0.0.1',
+      port: 8082,
+      grpcPort: 50052,
       role: leaderId === 'node2' ? 'LEADER' : 'FOLLOWER',
-      address: '127.0.0.1:8082',
-      logIndex: commitIndex,
-      commitIndex: commitIndex,
-      matchIndex: commitIndex,
-      lagMs: 0.4,
-      health: 'HEALTHY',
-      lastHeartbeat: '45ms ago',
+      healthy: true,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      matchIndex: commitIndex || 1,
+      nextIndex: (commitIndex || 1) + 1,
+      isLeader: leaderId === 'node2',
+      isLocal: false,
+      latencyMs: 0.45,
+      peers: 2,
     },
     {
       id: 'node3',
+      host: '127.0.0.1',
+      port: 8083,
+      grpcPort: 50053,
       role: leaderId === 'node3' ? 'LEADER' : 'FOLLOWER',
-      address: '127.0.0.1:8083',
-      logIndex: commitIndex - 1,
-      commitIndex: commitIndex - 1,
-      matchIndex: commitIndex - 1,
-      lagMs: 1.2,
-      health: 'SYNCING',
-      lastHeartbeat: '120ms ago',
+      healthy: true,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      matchIndex: commitIndex || 1,
+      nextIndex: (commitIndex || 1) + 1,
+      isLeader: leaderId === 'node3',
+      isLocal: false,
+      latencyMs: 0.45,
+      peers: 2,
     },
   ];
+
+  const nodes = propNodes && propNodes.length > 0 ? propNodes : fallbackNodes;
+  const healthyCount = nodes.filter((n) => n.healthy).length;
+  const totalCount = nodes.length;
+  const effectiveCommit = Math.max(commitIndex, ...nodes.map((n) => n.commitIndex), 1);
 
   return (
     <div className="glass-card rounded-2xl p-5 border border-[oklch(1_0_0/8%)] bg-[var(--surface-1)]">
@@ -71,14 +87,15 @@ export function ReplicationMatrix({
           </h3>
         </div>
         <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-          Quorum 3/3
+          Quorum {healthyCount}/{totalCount}
         </span>
       </div>
 
       <div className="space-y-3">
         {nodes.map((node) => {
-          const isLeader = node.role === 'LEADER';
-          const isSyncing = node.health === 'SYNCING';
+          const isLeader = node.role === 'LEADER' || node.isLeader;
+          const matchIdx = node.matchIndex ?? node.commitIndex;
+          const progressPercent = Math.min(100, Math.max(10, Math.round((matchIdx / effectiveCommit) * 100)));
 
           return (
             <div
@@ -99,6 +116,11 @@ export function ReplicationMatrix({
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-[var(--foreground)]">{node.id}</span>
+                    {node.isLocal && (
+                      <span className="text-[9px] font-mono text-cyan-400 bg-cyan-500/10 px-1.5 py-0.2 rounded border border-cyan-500/20">
+                        LOCAL
+                      </span>
+                    )}
                     <span
                       className={`text-[9px] font-mono font-bold px-1.5 py-0.2 rounded ${
                         isLeader
@@ -109,42 +131,44 @@ export function ReplicationMatrix({
                       {node.role}
                     </span>
                   </div>
-                  <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 font-medium">{node.address}</span>
+                  <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 font-medium">
+                    {node.host}:{node.port} <span className="text-[10px] text-neutral-500">(gRPC :{node.grpcPort})</span>
+                  </span>
                 </div>
               </div>
 
               {/* Middle: Log & Replication Bar */}
               <div className="flex-1 sm:max-w-xs space-y-1">
                 <div className="flex items-center justify-between text-xs font-mono text-neutral-600 dark:text-neutral-400 font-medium">
-                  <span>Log Index: {node.logIndex}</span>
-                  <span>Lag: {node.lagMs}ms</span>
+                  <span>Match: #{matchIdx}</span>
+                  <span>Lag: {node.latencyMs.toFixed(1)}ms</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-[oklch(1_0_0/6%)] overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${
                       isLeader
                         ? 'bg-gradient-to-r from-emerald-500 to-teal-400'
-                        : isSyncing
-                        ? 'bg-gradient-to-r from-amber-500 to-cyan-400'
-                        : 'bg-emerald-500'
+                        : 'bg-gradient-to-r from-teal-500 to-cyan-400'
                     }`}
-                    style={{ width: isLeader ? '100%' : `${(node.logIndex / commitIndex) * 100}%` }}
+                    style={{ width: `${progressPercent}%` }}
                   />
                 </div>
               </div>
 
               {/* Right: Heartbeat & Health Badge */}
               <div className="flex items-center gap-3 text-xs font-mono">
-                <span className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">{node.lastHeartbeat}</span>
+                <span className="text-neutral-600 dark:text-neutral-400 text-xs font-medium">
+                  Term {node.term}
+                </span>
                 <span
                   className={`flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-semibold ${
-                    node.health === 'HEALTHY'
+                    node.healthy
                       ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
-                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                      : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30'
                   }`}
                 >
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  {node.health}
+                  {node.healthy ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                  {node.healthy ? 'HEALTHY' : 'OFFLINE'}
                 </span>
               </div>
             </div>

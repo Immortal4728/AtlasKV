@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  * Lease operations are scoped to the caller's logical namespace.
  */
 @RestController
-@RequestMapping("/api/v1/lease")
+@RequestMapping({"/api/v1/lease", "/api/v1/leases"})
 @Tag(name = "Lease Management", description = "Endpoints for creating, renewing, and revoking distributed leases")
 public class LeaseController {
 
@@ -77,7 +77,9 @@ public class LeaseController {
                         .map(k -> NamespaceResolver.toClientKey(k, namespace))
                         .collect(Collectors.toSet());
                 return ResponseEntity.status(HttpStatus.CREATED)
-                        .body(new LeaseResponse(clientLeaseId, info.durationMs(), info.expiryTimeMs(), clientKeys));
+                        .body(new LeaseResponse(clientLeaseId, info.durationMs(), info.expiryTimeMs(), clientKeys,
+                                info.status() != null ? info.status().name() : "ACTIVE",
+                                info.createdAtMs(), info.lastActionTimeMs()));
             }
         }
         throw new IllegalStateException("Failed to retrieve created lease info");
@@ -120,6 +122,32 @@ public class LeaseController {
     }
 
     /**
+     * Retrieves a single lease by ID.
+     *
+     * @param leaseId lease ID to retrieve
+     * @param httpRequest HTTP servlet request
+     * @return lease details or 404 NOT_FOUND
+     */
+    @GetMapping("/{leaseId}")
+    @Operation(summary = "Get a lease by ID", description = "Returns details and status of a specific lease")
+    public ResponseEntity<LeaseResponse> getLease(
+            @PathVariable @NotBlank String leaseId,
+            HttpServletRequest httpRequest) {
+        String namespace = NamespaceResolver.resolveNamespace(httpRequest);
+        String storageLeaseId = NamespaceResolver.toStorageLeaseId(leaseId, namespace);
+        LeaseInfo info = leaseManager.getLease(storageLeaseId);
+        if (info == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Set<String> clientKeys = info.keys().stream()
+                .map(k -> NamespaceResolver.toClientKey(k, namespace))
+                .collect(Collectors.toSet());
+        return ResponseEntity.ok(new LeaseResponse(leaseId, info.durationMs(), info.expiryTimeMs(), clientKeys,
+                info.status() != null ? info.status().name() : "ACTIVE",
+                info.createdAtMs(), info.lastActionTimeMs()));
+    }
+
+    /**
      * Lists active leases within the caller's namespace.
      *
      * @param httpRequest HTTP servlet request
@@ -140,12 +168,16 @@ public class LeaseController {
                     Set<String> clientKeys = info.keys().stream()
                             .map(k -> NamespaceResolver.toClientKey(k, namespace))
                             .collect(Collectors.toSet());
-                    list.add(new LeaseResponse(clientLeaseId, info.durationMs(), info.expiryTimeMs(), clientKeys));
+                    list.add(new LeaseResponse(clientLeaseId, info.durationMs(), info.expiryTimeMs(), clientKeys,
+                            info.status() != null ? info.status().name() : "ACTIVE",
+                            info.createdAtMs(), info.lastActionTimeMs()));
                 }
             }
         } else {
             for (LeaseInfo info : allLeases) {
-                list.add(new LeaseResponse(info.leaseId(), info.durationMs(), info.expiryTimeMs(), info.keys()));
+                list.add(new LeaseResponse(info.leaseId(), info.durationMs(), info.expiryTimeMs(), info.keys(),
+                        info.status() != null ? info.status().name() : "ACTIVE",
+                        info.createdAtMs(), info.lastActionTimeMs()));
             }
         }
 

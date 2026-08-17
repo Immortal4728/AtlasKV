@@ -96,4 +96,14 @@ final class AtlasKVCliTest {
         assertThat(cmd.execute("metrics", "--help")).isZero();
         assertThat(cmd.execute("config", "--help")).isZero();
     }
+
+    @Test
+    void namespaceOptionParsedOnSubcommands() {
+        CommandLine cmd = AtlasKVCli.createCommandLine();
+        CommandLine.ParseResult result = cmd.parseArgs("put", "-n", "tenant-test", "mykey", "myval");
+        CommandLine.ParseResult subResult = result.subcommand();
+        assertThat(subResult).isNotNull();
+        assertThat(subResult.matchedOption("-n")).isNotNull();
+        assertThat((String) subResult.matchedOption("-n").getValue()).isEqualTo("tenant-test");
+    }
 }

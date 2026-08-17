@@ -23,6 +23,10 @@ public final class ConnectionMixin {
             description = "AtlasKV API key secret")
     private String apiKey;
 
+    @Option(names = {"-n", "--namespace"},
+            description = "Target namespace scope for multi-tenant isolation")
+    private String namespace;
+
     public String getEndpoint() {
         return endpoint;
     }
@@ -37,5 +41,9 @@ public final class ConnectionMixin {
 
     public String getApiKey() {
         return apiKey;
+    }
+
+    public String getNamespace() {
+        return namespace;
     }
 }

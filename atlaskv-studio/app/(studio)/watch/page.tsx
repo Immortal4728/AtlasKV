@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { PageHeader } from '@/components/ui/page-header';
 import { NamespaceBadge } from '@/components/ui/namespace-badge';
 import { useAuth } from '@/hooks/use-auth';
-import { getSavedBaseUrl, getSavedApiKey, getSavedAdminNamespace } from '@/services/api';
+import { getSavedBaseUrl, getSavedApiKey, getSavedAdminNamespace, normalizeAndValidateServerUrl } from '@/services/api';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -33,6 +33,7 @@ interface LogEntry {
 }
 
 export default function WatchPage() {
+  const { serverUrl, apiKey: currentApiKey, adminNamespace: currentAdminNs } = useAuth();
   const [targetKey, setTargetKey] = useState('app');
   const [isPrefix, setIsPrefix] = useState(true);
   const [isStreaming, setIsStreaming] = useState(true);
@@ -63,7 +64,10 @@ export default function WatchPage() {
   useEffect(() => {
     if (!isStreaming) return;
 
-    const baseUrl = getSavedBaseUrl() || window.location.origin;
+    const savedUrl = getSavedBaseUrl();
+    const baseUrl = savedUrl
+      ? normalizeAndValidateServerUrl(savedUrl).normalized || savedUrl
+      : window.location.origin;
     const cleanTarget = targetKey.trim().replace(/^\/+|\/+$/g, '');
     const path = isPrefix
       ? cleanTarget ? `/api/v1/watch/prefix/${encodeURIComponent(cleanTarget)}` : `/api/v1/watch/prefix`
@@ -137,7 +141,7 @@ export default function WatchPage() {
         eventSourceRef.current = null;
       }
     };
-  }, [isStreaming, targetKey, isPrefix]);
+  }, [isStreaming, targetKey, isPrefix, serverUrl, currentApiKey, currentAdminNs]);
 
   const handleClear = () => {
     setLogs([]);

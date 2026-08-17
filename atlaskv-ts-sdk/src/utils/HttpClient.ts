@@ -54,13 +54,15 @@ export class HttpClient {
   private readonly timeoutMs: number;
   private readonly retryPolicy: RetryPolicy;
   private readonly authentication: AuthenticationApplyFn;
+  private readonly namespace?: string;
 
   constructor(
     endpointOrHost: string,
     port: number,
     timeoutMs: number,
     retryPolicy: RetryPolicy,
-    authentication: AuthenticationApplyFn
+    authentication: AuthenticationApplyFn,
+    namespace?: string
   ) {
     if (endpointOrHost.startsWith("http://") || endpointOrHost.startsWith("https://")) {
       this.activeBaseUrl = endpointOrHost.replace(/\/+$/, "");
@@ -70,6 +72,7 @@ export class HttpClient {
     this.timeoutMs = timeoutMs;
     this.retryPolicy = retryPolicy;
     this.authentication = authentication;
+    this.namespace = namespace;
   }
 
   public getActiveBaseUrl(): string {
@@ -80,8 +83,15 @@ export class HttpClient {
     this.activeBaseUrl = url.replace(/\/+$/, "");
   }
 
+  public getNamespace(): string | undefined {
+    return this.namespace;
+  }
+
   public applyAuth(headers: Record<string, string>): void {
     this.authentication(headers);
+    if (this.namespace && !headers["X-Namespace"]) {
+      headers["X-Namespace"] = this.namespace;
+    }
   }
 
   public async execute<T>(options: RequestOptions): Promise<T> {
@@ -96,6 +106,9 @@ export class HttpClient {
         headers["Content-Type"] = "application/json";
       }
       this.authentication(headers);
+      if (this.namespace && !headers["X-Namespace"]) {
+        headers["X-Namespace"] = this.namespace;
+      }
 
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), this.timeoutMs);
@@ -129,9 +142,12 @@ export class HttpClient {
         if (err instanceof NotLeaderError) {
           if (err.leaderAddress && attempt < this.retryPolicy.maxRetries) {
             const scheme = this.activeBaseUrl.startsWith("https://") ? "https://" : "http://";
-            const target = err.leaderAddress.startsWith("http://") || err.leaderAddress.startsWith("https://")
+            let target = err.leaderAddress.startsWith("http://") || err.leaderAddress.startsWith("https://")
               ? err.leaderAddress
               : `${scheme}${err.leaderAddress}`;
+            if (this.activeBaseUrl.includes("localhost") || this.activeBaseUrl.includes("127.0.0.1")) {
+              target = target.replace(/atlaskv-node\d+/g, "localhost");
+            }
             this.activeBaseUrl = target.replace(/\/+$/, "");
             attempt++;
             continue;

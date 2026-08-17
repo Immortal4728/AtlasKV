@@ -21,6 +21,8 @@ export function useCreateLease() {
       LeaseApi.create(ttl, leaseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
+      queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });
 }
@@ -31,6 +33,8 @@ export function useRenewLease() {
     mutationFn: (leaseId: string) => LeaseApi.renew(leaseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
+      queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });
 }
@@ -41,6 +45,9 @@ export function useRevokeLease() {
     mutationFn: (leaseId: string) => LeaseApi.revoke(leaseId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leases'] });
+      queryClient.invalidateQueries({ queryKey: ['kv', 'prefix'] });
+      queryClient.invalidateQueries({ queryKey: ['kv', 'key'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
     },
   });
 }

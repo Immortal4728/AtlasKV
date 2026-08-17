@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
+import type { NodeDetail } from '@/types/api';
 
 interface NodeState {
   id: string;
@@ -25,7 +26,21 @@ interface Pulse {
   startTime: number;
 }
 
-export function RaftClusterViz({ className = '' }: { className?: string }) {
+interface RaftClusterVizProps {
+  className?: string;
+  nodes?: NodeDetail[];
+  leaderId?: string;
+  term?: number;
+  commitIndex?: number;
+}
+
+export function RaftClusterViz({
+  className = '',
+  nodes: propNodes,
+  leaderId,
+  term = 1,
+  commitIndex = 0,
+}: RaftClusterVizProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const nodesRef = useRef<NodeState[]>([]);
@@ -38,12 +53,33 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
     const cx = 240;
     const cy = 170;
     const r = 110;
-    nodesRef.current = [
-      { id: 'n1', label: 'Node 1', role: 'leader', x: cx, y: cy - r, term: 3, commitIndex: 42, logLength: 45, lastHeartbeat: 0 },
-      { id: 'n2', label: 'Node 2', role: 'follower', x: cx + r * Math.cos(Math.PI / 6), y: cy + r * Math.sin(Math.PI / 6), term: 3, commitIndex: 42, logLength: 44, lastHeartbeat: 0 },
-      { id: 'n3', label: 'Node 3', role: 'follower', x: cx - r * Math.cos(Math.PI / 6), y: cy + r * Math.sin(Math.PI / 6), term: 3, commitIndex: 41, logLength: 43, lastHeartbeat: 0 },
-    ];
-  }, []);
+
+    if (propNodes && propNodes.length > 0) {
+      const count = propNodes.length;
+      nodesRef.current = propNodes.map((n, idx) => {
+        // Position evenly in a circle starting from top (-PI/2)
+        const angle = -Math.PI / 2 + (idx * 2 * Math.PI) / count;
+        const role = (n.role ? n.role.toLowerCase() : n.isLeader ? 'leader' : 'follower') as 'leader' | 'follower' | 'candidate';
+        return {
+          id: n.id,
+          label: n.id.toUpperCase(),
+          role,
+          x: cx + r * Math.cos(angle),
+          y: cy + r * Math.sin(angle),
+          term: n.term || term,
+          commitIndex: n.commitIndex || commitIndex,
+          logLength: n.appliedIndex || commitIndex,
+          lastHeartbeat: 0,
+        };
+      });
+    } else {
+      nodesRef.current = [
+        { id: 'node1', label: 'NODE 1', role: leaderId === 'node2' ? 'follower' : 'leader', x: cx, y: cy - r, term, commitIndex, logLength: commitIndex, lastHeartbeat: 0 },
+        { id: 'node2', label: 'NODE 2', role: leaderId === 'node2' ? 'leader' : 'follower', x: cx + r * Math.cos(Math.PI / 6), y: cy + r * Math.sin(Math.PI / 6), term, commitIndex, logLength: commitIndex, lastHeartbeat: 0 },
+        { id: 'node3', label: 'NODE 3', role: 'follower', x: cx - r * Math.cos(Math.PI / 6), y: cy + r * Math.sin(Math.PI / 6), term, commitIndex, logLength: commitIndex, lastHeartbeat: 0 },
+      ];
+    }
+  }, [propNodes, leaderId, term, commitIndex]);
 
   useEffect(() => {
     initNodes();
@@ -71,8 +107,10 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
     const addPulse = (from: NodeState, to: NodeState, type: Pulse['type']) => {
       pulsesRef.current.push({
         id: `${from.id}-${to.id}-${Date.now()}-${Math.random()}`,
-        fromX: from.x, fromY: from.y,
-        toX: to.x, toY: to.y,
+        fromX: from.x,
+        fromY: from.y,
+        toX: to.x,
+        toY: to.y,
         progress: 0,
         type,
         startTime: performance.now(),
@@ -94,11 +132,11 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
       phaseTimerRef.current += dt;
       const phase = phaseRef.current;
 
-      if (phase === 'steady' && phaseTimerRef.current > 4) {
-        // Send heartbeats periodically
-        const leader = nodes.find(n => n.role === 'leader');
+      if (phase === 'steady' && phaseTimerRef.current > 3) {
+        // Send heartbeats periodically from leader
+        const leader = nodes.find((n) => n.role === 'leader');
         if (leader) {
-          nodes.forEach(n => {
+          nodes.forEach((n) => {
             if (n.role === 'follower') {
               addPulse(leader, n, 'heartbeat');
               n.lastHeartbeat = tickRef.current;
@@ -107,72 +145,29 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
         }
         phaseTimerRef.current = 0;
 
-        // Occasionally trigger election cycle
-        if (Math.random() < 0.15) {
-          phaseRef.current = 'election';
-          phaseTimerRef.current = 0;
-        }
-        // Occasionally trigger replication
-        if (Math.random() < 0.3 && phaseRef.current === 'steady') {
+        // Occasionally trigger replication animation
+        if (Math.random() < 0.25 && phaseRef.current === 'steady') {
           phaseRef.current = 'replication';
           phaseTimerRef.current = 0;
         }
       }
 
-      if (phase === 'election') {
-        if (phaseTimerRef.current < 0.5) {
-          // Candidate phase
-          const candidate = nodes[1]; // Node 2 becomes candidate
-          candidate.role = 'candidate';
-          candidate.term += 1;
-        } else if (phaseTimerRef.current >= 0.5 && phaseTimerRef.current < 1.0) {
-          // Send vote requests
-          if (phaseTimerRef.current - dt < 0.5) {
-            const candidate = nodes[1];
-            nodes.forEach(n => {
-              if (n.id !== candidate.id) addPulse(candidate, n, 'vote');
-            });
-          }
-        } else if (phaseTimerRef.current >= 1.5 && phaseTimerRef.current < 2.0) {
-          // Vote responses
-          if (phaseTimerRef.current - dt < 1.5) {
-            const candidate = nodes[1];
-            nodes.forEach(n => {
-              if (n.id !== candidate.id) addPulse(n, candidate, 'vote');
-            });
-          }
-        } else if (phaseTimerRef.current >= 2.5) {
-          // New leader
-          nodes[0].role = 'follower';
-          nodes[1].role = 'leader';
-          nodes[1].term = nodes[1].term;
-          nodes.forEach(n => { n.term = nodes[1].term; });
-          phaseRef.current = 'steady';
-          phaseTimerRef.current = 0;
-        }
-      }
-
       if (phase === 'replication') {
-        const leader = nodes.find(n => n.role === 'leader');
+        const leader = nodes.find((n) => n.role === 'leader');
         if (leader) {
           if (phaseTimerRef.current >= 0.3 && phaseTimerRef.current - dt < 0.3) {
-            leader.logLength += 1;
-            nodes.forEach(n => {
+            nodes.forEach((n) => {
               if (n.role === 'follower') addPulse(leader, n, 'append');
             });
           }
-          if (phaseTimerRef.current >= 1.5 && phaseTimerRef.current - dt < 1.5) {
-            nodes.forEach(n => {
+          if (phaseTimerRef.current >= 1.2 && phaseTimerRef.current - dt < 1.2) {
+            nodes.forEach((n) => {
               if (n.role === 'follower') {
-                n.logLength = leader.logLength;
                 addPulse(n, leader, 'commit');
               }
             });
           }
-          if (phaseTimerRef.current >= 2.5 && phaseTimerRef.current - dt < 2.5) {
-            nodes.forEach(n => { n.commitIndex = leader.logLength; });
-          }
-          if (phaseTimerRef.current >= 3.0) {
+          if (phaseTimerRef.current >= 2.2) {
             phaseRef.current = 'steady';
             phaseTimerRef.current = 0;
           }
@@ -183,7 +178,7 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
       }
 
       // Update pulses
-      pulsesRef.current = pulsesRef.current.filter(p => {
+      pulsesRef.current = pulsesRef.current.filter((p) => {
         p.progress = Math.min(1, (now - p.startTime) / 800);
         return p.progress < 1;
       });
@@ -203,17 +198,29 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
       }
 
       // Draw pulses
-      pulsesRef.current.forEach(p => {
+      pulsesRef.current.forEach((p) => {
         const px = p.fromX + (p.toX - p.fromX) * p.progress;
         const py = p.fromY + (p.toY - p.fromY) * p.progress;
         const alpha = 1 - p.progress * 0.7;
 
         let color = '20, 224, 197'; // teal
         let radius = 3;
-        if (p.type === 'heartbeat') { color = '20, 224, 197'; radius = 2.5; }
-        if (p.type === 'append') { color = '99, 179, 237'; radius = 3.5; }
-        if (p.type === 'vote') { color = '183, 148, 244'; radius = 3; }
-        if (p.type === 'commit') { color = '72, 187, 120'; radius = 3; }
+        if (p.type === 'heartbeat') {
+          color = '20, 224, 197';
+          radius = 2.5;
+        }
+        if (p.type === 'append') {
+          color = '99, 179, 237';
+          radius = 3.5;
+        }
+        if (p.type === 'vote') {
+          color = '183, 148, 244';
+          radius = 3;
+        }
+        if (p.type === 'commit') {
+          color = '72, 187, 120';
+          radius = 3;
+        }
 
         // Trail
         ctx.strokeStyle = `rgba(${color}, ${alpha * 0.3})`;
@@ -237,7 +244,7 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
       });
 
       // Draw nodes
-      nodes.forEach(node => {
+      nodes.forEach((node) => {
         const isLeader = node.role === 'leader';
         const isCandidate = node.role === 'candidate';
         const nodeRadius = isLeader ? 30 : 26;
@@ -277,10 +284,16 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
 
         // Role label
         ctx.fillStyle = isLeader
-          ? (isDark ? '#2dd4bf' : '#047857')
+          ? isDark
+            ? '#2dd4bf'
+            : '#047857'
           : isCandidate
-          ? (isDark ? '#c084fc' : '#7e22ce')
-          : (isDark ? '#94a3b8' : '#475569');
+          ? isDark
+            ? '#c084fc'
+            : '#7e22ce'
+          : isDark
+          ? '#94a3b8'
+          : '#475569';
         ctx.font = '600 10px "Space Grotesk", system-ui, -apple-system, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -294,16 +307,28 @@ export function RaftClusterViz({ className = '' }: { className?: string }) {
         // Stats below node
         ctx.fillStyle = isDark ? '#94a3b8' : '#475569';
         ctx.font = '600 10px "SF Mono", "Geist Mono", monospace';
-        ctx.fillText(`T:${node.term} CI:${node.commitIndex} L:${node.logLength}`, node.x, node.y + nodeRadius + 15);
+        ctx.fillText(`T:${node.term} CI:${node.commitIndex}`, node.x, node.y + nodeRadius + 15);
       });
 
       // Phase indicator
-      const phaseLabel = phase === 'election' ? 'LEADER ELECTION' : phase === 'replication' ? 'LOG REPLICATION' : 'HEARTBEAT';
-      const phaseColor = phase === 'election'
-        ? (isDark ? '#c084fc' : '#7e22ce')
-        : phase === 'replication'
-        ? (isDark ? '#60a5fa' : '#2563eb')
-        : (isDark ? '#2dd4bf' : '#047857');
+      const phaseLabel =
+        phase === 'election'
+          ? 'LEADER ELECTION'
+          : phase === 'replication'
+          ? 'LOG REPLICATION'
+          : 'HEARTBEAT QUORUM';
+      const phaseColor =
+        phase === 'election'
+          ? isDark
+            ? '#c084fc'
+            : '#7e22ce'
+          : phase === 'replication'
+          ? isDark
+            ? '#60a5fa'
+            : '#2563eb'
+          : isDark
+          ? '#2dd4bf'
+          : '#047857';
 
       // Status dot
       ctx.beginPath();

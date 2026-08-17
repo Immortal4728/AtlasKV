@@ -6,18 +6,12 @@ import {
   Zap,
   Vote,
   Activity,
-  RotateCcw,
   Crown,
   Server,
-  Heart,
   Radio,
   CheckCircle2,
-  Cpu,
-  Layers,
-  Sparkles,
-  Wifi,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import type { NodeDetail } from '@/types/api';
 
 interface NodeState {
   id: string;
@@ -46,60 +40,110 @@ interface Particle {
   color: string;
 }
 
-export function InteractiveClusterViz() {
+interface InteractiveClusterVizProps {
+  liveNodes?: NodeDetail[];
+  leaderId?: string;
+  term?: number;
+  commitIndex?: number;
+}
+
+export function InteractiveClusterViz({
+  liveNodes,
+  leaderId,
+  term = 1,
+  commitIndex = 0,
+}: InteractiveClusterVizProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const tickRef = useRef<number>(0);
 
-  const [nodes, setNodes] = useState<NodeState[]>([
-    {
-      id: 'node3',
-      label: 'Node 3',
-      host: 'localhost',
-      port: 8083,
-      role: 'LEADER',
-      x: 320,
-      y: 75,
-      term: 47,
-      commitIndex: 34601,
-      appliedIndex: 34601,
-      latencyMs: 0.38,
-      healthy: true,
-    },
+  const defaultNodes: NodeState[] = [
     {
       id: 'node1',
       label: 'Node 1',
-      host: 'localhost',
+      host: '127.0.0.1',
       port: 8081,
-      role: 'FOLLOWER',
-      x: 120,
-      y: 250,
-      term: 47,
-      commitIndex: 34601,
-      appliedIndex: 34601,
-      latencyMs: 0.45,
+      role: 'LEADER',
+      x: 320,
+      y: 75,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      latencyMs: 0.0,
       healthy: true,
     },
     {
       id: 'node2',
       label: 'Node 2',
-      host: 'localhost',
+      host: '127.0.0.1',
       port: 8082,
       role: 'FOLLOWER',
-      x: 520,
+      x: 140,
       y: 250,
-      term: 47,
-      commitIndex: 34601,
-      appliedIndex: 34601,
-      latencyMs: 0.52,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      latencyMs: 0.45,
       healthy: true,
     },
-  ]);
+    {
+      id: 'node3',
+      label: 'Node 3',
+      host: '127.0.0.1',
+      port: 8083,
+      role: 'FOLLOWER',
+      x: 500,
+      y: 250,
+      term: term || 1,
+      commitIndex: commitIndex || 1,
+      appliedIndex: commitIndex || 1,
+      latencyMs: 0.48,
+      healthy: true,
+    },
+  ];
 
+  const [nodes, setNodes] = useState<NodeState[]>(defaultNodes);
   const [hoveredNode, setHoveredNode] = useState<NodeState | null>(null);
   const [activeSimulation, setActiveSimulation] = useState<'idle' | 'traffic' | 'election' | 'sync'>('idle');
   const [rpcCount, setRpcCount] = useState(1482);
   const particlesRef = useRef<Particle[]>([]);
+
+  // Update nodes when liveNodes changes
+  useEffect(() => {
+    if (liveNodes && liveNodes.length > 0) {
+      const positions = [
+        { x: 320, y: 75 },
+        { x: 140, y: 250 },
+        { x: 500, y: 250 },
+        { x: 230, y: 160 },
+        { x: 410, y: 160 },
+      ];
+
+      // Place leader at top if possible
+      const sorted = [...liveNodes].sort((a, b) => (b.isLeader ? 1 : 0) - (a.isLeader ? 1 : 0));
+
+      setNodes(
+        sorted.map((n, idx) => {
+          const pos = positions[idx % positions.length];
+          const role = (n.role || (n.isLeader ? 'LEADER' : 'FOLLOWER')) as 'LEADER' | 'FOLLOWER' | 'CANDIDATE';
+          return {
+            id: n.id,
+            label: n.id.toUpperCase(),
+            host: n.host,
+            port: n.port,
+            role,
+            x: pos.x,
+            y: pos.y,
+            term: n.term,
+            commitIndex: n.commitIndex,
+            appliedIndex: n.appliedIndex,
+            latencyMs: n.latencyMs,
+            healthy: n.healthy,
+          };
+        })
+      );
+    }
+  }, [liveNodes]);
 
   // Spawn dynamic particle
   const spawnParticle = useCallback((from: NodeState, to: NodeState, type: Particle['type']) => {
@@ -115,7 +159,7 @@ export function InteractiveClusterViz() {
       toX: to.x,
       toY: to.y,
       progress: 0,
-      speed: 0.015 + Math.random() * 0.01,
+      speed: 0.018 + Math.random() * 0.01,
       type,
       color,
     });
@@ -129,11 +173,10 @@ export function InteractiveClusterViz() {
     const leader = nodes.find((n) => n.role === 'LEADER');
     const followers = nodes.filter((n) => n.role !== 'LEADER');
 
-    if (leader && followers.length >= 2) {
+    if (leader && followers.length > 0) {
       for (let i = 0; i < 8; i++) {
         setTimeout(() => {
-          spawnParticle(leader, followers[0], 'append');
-          spawnParticle(leader, followers[1], 'append');
+          followers.forEach((f) => spawnParticle(leader, f, 'append'));
         }, i * 180);
       }
     }
@@ -146,16 +189,16 @@ export function InteractiveClusterViz() {
     setActiveSimulation('election');
 
     setNodes((prev) =>
-      prev.map((n) => {
-        if (n.id === 'node1') return { ...n, role: 'LEADER', term: n.term + 1 };
-        if (n.id === 'node3') return { ...n, role: 'FOLLOWER', term: n.term + 1 };
+      prev.map((n, idx) => {
+        if (idx === 1) return { ...n, role: 'LEADER', term: n.term + 1 };
+        if (idx === 0) return { ...n, role: 'FOLLOWER', term: n.term + 1 };
         return { ...n, term: n.term + 1 };
       })
     );
 
     setTimeout(() => {
-      const candidate = nodes.find((n) => n.id === 'node1');
-      const peers = nodes.filter((n) => n.id !== 'node1');
+      const candidate = nodes[1] || nodes[0];
+      const peers = nodes.filter((n) => n.id !== candidate.id);
       if (candidate) {
         peers.forEach((p) => spawnParticle(candidate, p, 'vote'));
       }
@@ -187,7 +230,6 @@ export function InteractiveClusterViz() {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    let animationFrame: number;
 
     const resize = () => {
       const parent = canvas.parentElement;
@@ -250,153 +292,128 @@ export function InteractiveClusterViz() {
             ctx.setLineDash([4, 4]);
           }
           ctx.stroke();
-          ctx.setLineDash([]);
         }
       }
 
-      // 2. Render Animated Particles
-      particlesRef.current = particlesRef.current.filter((p) => {
-        p.progress += p.speed;
-        return p.progress <= 1;
-      });
+      // 2. Animate and Render Data Transmission Particles
+      particlesRef.current = particlesRef.current.filter((p) => p.progress < 1);
 
       particlesRef.current.forEach((p) => {
-        const fromNode = scaledNodes.find((n) => n.x === p.fromX && n.y === p.fromY);
-        const toNode = scaledNodes.find((n) => n.x === p.toX && n.y === p.toY);
+        p.progress += p.speed;
 
-        if (!fromNode || !toNode) return;
+        const currentX = (p.fromX + (p.toX - p.fromX) * p.progress) * scaleX;
+        const currentY = (p.fromY + (p.toY - p.fromY) * p.progress) * scaleY;
 
-        const currX = fromNode.cx + (toNode.cx - fromNode.cx) * p.progress;
-        const currY = fromNode.cy + (toNode.cy - fromNode.cy) * p.progress;
-
-        // Particle Glow Trail
         ctx.beginPath();
-        ctx.arc(currX, currY, 6, 0, Math.PI * 2);
-        ctx.fillStyle = p.color + '40';
-        ctx.fill();
-
-        // Core Particle
-        ctx.beginPath();
-        ctx.arc(currX, currY, 3.5, 0, Math.PI * 2);
+        ctx.arc(currentX, currentY, 4, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8;
         ctx.fill();
+        ctx.shadowBlur = 0;
       });
 
-      // 3. Render Nodes
+      // 3. Render Raft Nodes
       scaledNodes.forEach((node) => {
         const isLeader = node.role === 'LEADER';
         const isCandidate = node.role === 'CANDIDATE';
-        const radius = isLeader ? 26 : 22;
+        const radius = isLeader ? 32 : 26;
 
-        // Leader Glowing Aura Ring
+        // Outer Aura Ring
+        ctx.beginPath();
+        ctx.arc(node.cx, node.cy, radius + 8, 0, Math.PI * 2);
         if (isLeader) {
-          const auraRadius = radius + 12 + Math.sin(tickRef.current * 3) * 4;
-          ctx.beginPath();
-          ctx.arc(node.cx, node.cy, auraRadius, 0, Math.PI * 2);
-          ctx.fillStyle = isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.18)';
-          ctx.fill();
-
-          ctx.beginPath();
-          ctx.arc(node.cx, node.cy, radius + 6, 0, Math.PI * 2);
-          ctx.strokeStyle = isDark ? 'rgba(16, 185, 129, 0.4)' : 'rgba(16, 185, 129, 0.6)';
-          ctx.lineWidth = 1.5;
-          ctx.stroke();
+          ctx.fillStyle = isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.15)';
+        } else if (isCandidate) {
+          ctx.fillStyle = isDark ? 'rgba(168, 85, 247, 0.12)' : 'rgba(168, 85, 247, 0.15)';
+        } else {
+          ctx.fillStyle = isDark ? 'rgba(59, 130, 246, 0.06)' : 'rgba(59, 130, 246, 0.1)';
         }
+        ctx.fill();
 
-        // Candidate Aura Ring
-        if (isCandidate) {
-          const auraRadius = radius + 10 + Math.sin(tickRef.current * 5) * 5;
-          ctx.beginPath();
-          ctx.arc(node.cx, node.cy, auraRadius, 0, Math.PI * 2);
-          ctx.fillStyle = isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.22)';
-          ctx.fill();
-        }
-
-        // Node Main Body Circle
+        // Base Node Circle
         ctx.beginPath();
         ctx.arc(node.cx, node.cy, radius, 0, Math.PI * 2);
-
-        if (isLeader) {
-          ctx.fillStyle = isDark ? 'rgba(16, 185, 129, 0.22)' : 'rgba(16, 185, 129, 0.25)';
-          ctx.strokeStyle = isDark ? '#10b981' : '#059669';
-          ctx.lineWidth = 2.5;
-        } else if (isCandidate) {
-          ctx.fillStyle = isDark ? 'rgba(168, 85, 247, 0.22)' : 'rgba(168, 85, 247, 0.25)';
-          ctx.strokeStyle = isDark ? '#a855f7' : '#7e22ce';
-          ctx.lineWidth = 2.5;
-        } else {
-          ctx.fillStyle = isDark ? 'rgba(30, 41, 59, 0.7)' : 'rgba(241, 245, 249, 0.9)';
-          ctx.strokeStyle = isDark ? 'rgba(148, 163, 184, 0.3)' : 'rgba(100, 116, 139, 0.4)';
-          ctx.lineWidth = 2;
-        }
-
+        ctx.fillStyle = isDark ? '#0f172a' : '#ffffff';
+        ctx.strokeStyle = isLeader
+          ? '#10b981'
+          : isCandidate
+          ? '#a855f7'
+          : isDark
+          ? '#334155'
+          : '#cbd5e1';
+        ctx.lineWidth = isLeader ? 3 : 2;
+        ctx.shadowColor = isLeader ? 'rgba(16, 185, 129, 0.4)' : 'transparent';
+        ctx.shadowBlur = isLeader ? 16 : 0;
         ctx.fill();
         ctx.stroke();
+        ctx.shadowBlur = 0;
 
-        // Role Icon indicator inside node
-        ctx.fillStyle = isLeader
-          ? isDark ? '#34d399' : '#047857'
-          : isCandidate
-          ? isDark ? '#c084fc' : '#7e22ce'
-          : isDark ? '#94a3b8' : '#334155';
-
-        ctx.font = '700 10px "Space Grotesk", sans-serif';
+        // Node Title Text
+        ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
+        ctx.font = 'bold 12px monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(node.role, node.cx, node.cy - 5);
+        ctx.fillText(node.label, node.cx, node.cy - 4);
 
-        // Node ID Label
-        ctx.fillStyle = isDark ? '#f8fafc' : '#0f172a';
-        ctx.font = '700 12px "Space Grotesk", sans-serif';
-        ctx.fillText(node.label, node.cx, node.cy + 7);
-
-        // Telemetry Subtext
-        ctx.fillStyle = isDark ? '#94a3b8' : '#475569';
-        ctx.font = '600 10px "SF Mono", monospace';
-        ctx.fillText(`Term ${node.term} · ${node.latencyMs}ms`, node.cx, node.cy + radius + 15);
+        // Role Subtext
+        ctx.fillStyle = isLeader ? '#10b981' : isCandidate ? '#a855f7' : '#64748b';
+        ctx.font = '10px monospace';
+        ctx.fillText(node.role, node.cx, node.cy + 10);
       });
 
-      animationFrame = requestAnimationFrame(render);
+      animRef.current = requestAnimationFrame(render);
     };
 
-    animationFrame = requestAnimationFrame(render);
+    animRef.current = requestAnimationFrame(render);
 
     return () => {
-      cancelAnimationFrame(animationFrame);
       clearInterval(heartbeatInterval);
+      cancelAnimationFrame(animRef.current);
       window.removeEventListener('resize', resize);
     };
-  }, [nodes, spawnParticle]);
+  }, [nodes]);
+
+  // Canvas Mouse Move Interaction
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (640 / canvas.clientWidth);
+    const y = (e.clientY - rect.top) * (320 / canvas.clientHeight);
+
+    const hit = nodes.find((n) => {
+      const dx = n.x - x;
+      const dy = n.y - y;
+      return Math.sqrt(dx * dx + dy * dy) < 35;
+    });
+
+    setHoveredNode(hit || null);
+  };
+
+  const healthyCount = nodes.filter((n) => n.healthy).length;
+  const totalCount = nodes.length;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45 }}
-      className="glass-card rounded-2xl p-6 relative overflow-hidden border border-border dark:border-[oklch(1_0_0/8%)]"
+      className="glass-card rounded-2xl p-5 border border-border dark:border-[oklch(1_0_0/8%)] bg-[var(--surface-1)] shadow-sm"
     >
-      {/* Ambient background glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[380px] h-[220px] bg-emerald-500/10 dark:bg-emerald-500/8 blur-[90px] pointer-events-none" />
-
-      {/* Header & Controls Bar */}
-      <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 pb-4 border-b border-border dark:border-[oklch(1_0_0/6%)]">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-            <Radio className="h-4.5 w-4.5 animate-pulse" />
-          </div>
-          <div>
-            <h3 className="text-sm font-bold tracking-tight text-[var(--foreground)] flex items-center gap-2 font-mono">
-              Cluster Topology Mesh
-            </h3>
-            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">
-              Node status and RPC packet flow.
-            </p>
-          </div>
+      {/* Control Header & Simulation Controls */}
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-border dark:border-[oklch(1_0_0/6%)]">
+        <div className="flex items-center gap-2">
+          <Radio className="h-4 w-4 text-emerald-500 animate-pulse" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)] font-mono">
+            Interactive Consensus Visualizer
+          </h3>
         </div>
 
-        {/* Live Simulation Controls */}
+        {/* Simulation Action Buttons */}
         <div className="flex flex-wrap items-center gap-2">
           <button
+            id="viz-simulate-traffic-btn"
             onClick={triggerTraffic}
             disabled={activeSimulation !== 'idle'}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
@@ -406,6 +423,7 @@ export function InteractiveClusterViz() {
           </button>
 
           <button
+            id="viz-trigger-election-btn"
             onClick={triggerElection}
             disabled={activeSimulation !== 'idle'}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-purple-500/12 text-purple-600 dark:text-purple-400 border border-purple-500/30 hover:bg-purple-500/20 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
@@ -415,6 +433,7 @@ export function InteractiveClusterViz() {
           </button>
 
           <button
+            id="viz-ping-heartbeats-btn"
             onClick={triggerHeartbeat}
             disabled={activeSimulation !== 'idle'}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-cyan-500/12 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
@@ -427,7 +446,12 @@ export function InteractiveClusterViz() {
 
       {/* Interactive Animation Canvas Area */}
       <div className="relative w-full h-[300px] flex items-center justify-center rounded-xl bg-neutral-100/50 dark:bg-[var(--surface-0)] border border-border dark:border-[oklch(1_0_0/5%)] overflow-hidden shadow-inner">
-        <canvas ref={canvasRef} className="w-full h-full block" />
+        <canvas
+          ref={canvasRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoveredNode(null)}
+          className="w-full h-full block cursor-crosshair"
+        />
 
         {/* Hover telemetry card */}
         <AnimatePresence>
@@ -436,11 +460,15 @@ export function InteractiveClusterViz() {
               initial={{ opacity: 0, scale: 0.9, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="absolute bottom-4 left-4 p-3.5 rounded-xl glass-card border border-emerald-500/30 text-xs font-mono space-y-1.5 shadow-xl max-w-xs"
+              className="absolute bottom-4 left-4 p-3.5 rounded-xl glass-card border border-emerald-500/30 text-xs font-mono space-y-1.5 shadow-xl max-w-xs pointer-events-none"
             >
               <div className="flex items-center justify-between font-bold text-[var(--foreground)] border-b border-border pb-1">
                 <span className="flex items-center gap-1.5">
-                  <Crown className="h-3.5 w-3.5 text-emerald-500" />
+                  {hoveredNode.role === 'LEADER' ? (
+                    <Crown className="h-3.5 w-3.5 text-emerald-500" />
+                  ) : (
+                    <Server className="h-3.5 w-3.5 text-cyan-500" />
+                  )}
                   {hoveredNode.label}
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -455,7 +483,7 @@ export function InteractiveClusterViz() {
                 <span>Commit Index:</span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{hoveredNode.commitIndex}</span>
                 <span>Latency:</span>
-                <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{hoveredNode.latencyMs}ms</span>
+                <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{hoveredNode.latencyMs.toFixed(2)}ms</span>
               </div>
             </motion.div>
           )}
@@ -467,10 +495,10 @@ export function InteractiveClusterViz() {
         <div className="flex items-center gap-4 text-neutral-600 dark:text-neutral-400 font-medium">
           <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-semibold">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            3/3 Quorum Active
+            {healthyCount}/{totalCount} Quorum Active
           </span>
           <span>RPCs Handled: <strong className="text-[var(--foreground)] font-bold">{rpcCount.toLocaleString()}</strong></span>
-          <span>Avg Latency: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">0.42ms</strong></span>
+          <span>Commit Index: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">#{commitIndex}</strong></span>
         </div>
 
         <div className="flex items-center gap-2">

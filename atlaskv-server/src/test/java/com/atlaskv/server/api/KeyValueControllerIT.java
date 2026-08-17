@@ -427,5 +427,93 @@ class KeyValueControllerIT {
         assertThat(historyResp.getBody()[3].operation()).isEqualTo("ROLLBACK");
         assertThat(historyResp.getBody()[3].value()).isEqualTo("val2");
     }
+
+    @Test
+    @DisplayName("Key Revision History tracks PUT -> Update -> Lease Expiration -> Rollback -> DELETE")
+    void testFullKeyRevisionHistoryLifecycle() throws Exception {
+        if (!isLeader) {
+            return;
+        }
+
+        String key = "lifecycle-key";
+
+        // Step 1: PUT (create)
+        ResponseEntity<KeyValueResponse> put1 = restTemplate.postForEntity(
+                "/api/v1/kv/" + key, new KeyValueRequest("version-1-initial"), KeyValueResponse.class);
+        assertThat(put1.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Step 2: PUT (update)
+        ResponseEntity<KeyValueResponse> put2 = restTemplate.postForEntity(
+                "/api/v1/kv/" + key, new KeyValueRequest("version-2-updated"), KeyValueResponse.class);
+        assertThat(put2.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Step 3: Create short lease and attach key
+        com.atlaskv.server.api.dto.LeaseRequest leaseReq = new com.atlaskv.server.api.dto.LeaseRequest(null, "1s");
+        ResponseEntity<com.atlaskv.server.api.dto.LeaseResponse> leaseRes = restTemplate.postForEntity(
+                "/api/v1/leases", leaseReq, com.atlaskv.server.api.dto.LeaseResponse.class);
+        String leaseId = leaseRes.getBody().leaseId();
+
+        KeyValueRequest put3Req = new KeyValueRequest("version-3-leased", null, leaseId);
+        ResponseEntity<KeyValueResponse> put3 = restTemplate.postForEntity(
+                "/api/v1/kv/" + key, put3Req, KeyValueResponse.class);
+        assertThat(put3.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+
+        // Wait for lease to expire
+        Thread.sleep(1800);
+
+        // Key should now be expired / 404
+        ResponseEntity<KeyValueResponse> getExp = restTemplate.getForEntity(
+                "/api/v1/kv/" + key, KeyValueResponse.class);
+        assertThat(getExp.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+
+        // Step 4: GET /history should contain all 4 revisions: PUT, PUT, PUT, EXPIRE
+        ResponseEntity<com.atlaskv.server.api.dto.RevisionResponse[]> histResp = restTemplate.getForEntity(
+                "/api/v1/kv/" + key + "/history?linearizable=false",
+                com.atlaskv.server.api.dto.RevisionResponse[].class);
+        assertThat(histResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        com.atlaskv.server.api.dto.RevisionResponse[] revisions = histResp.getBody();
+        assertThat(revisions).isNotNull().hasSize(4);
+
+        assertThat(revisions[0].revisionNumber()).isEqualTo(1L);
+        assertThat(revisions[0].value()).isEqualTo("version-1-initial");
+        assertThat(revisions[0].operation()).isEqualTo("PUT");
+
+        assertThat(revisions[1].revisionNumber()).isEqualTo(2L);
+        assertThat(revisions[1].value()).isEqualTo("version-2-updated");
+        assertThat(revisions[1].operation()).isEqualTo("PUT");
+
+        assertThat(revisions[2].revisionNumber()).isEqualTo(3L);
+        assertThat(revisions[2].value()).isEqualTo("version-3-leased");
+        assertThat(revisions[2].operation()).isEqualTo("PUT");
+        assertThat(revisions[2].leaseId()).isEqualTo(leaseId);
+
+        assertThat(revisions[3].revisionNumber()).isEqualTo(4L);
+        assertThat(revisions[3].value()).isNull();
+        assertThat(revisions[3].operation()).isEqualTo("EXPIRE");
+        assertThat(revisions[3].leaseId()).isEqualTo(leaseId);
+
+        // Step 5: Rollback to v2
+        ResponseEntity<KeyValueResponse> rollResp = restTemplate.postForEntity(
+                "/api/v1/kv/" + key + "/rollback/2", null, KeyValueResponse.class);
+        assertThat(rollResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(rollResp.getBody().value()).isEqualTo("version-2-updated");
+
+        // Step 6: DELETE key
+        ResponseEntity<KeyValueResponse> delResp = restTemplate.exchange(
+                "/api/v1/kv/" + key, HttpMethod.DELETE, null, KeyValueResponse.class);
+        assertThat(delResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        // Final History verification: 6 revisions (PUT, PUT, PUT, EXPIRE, ROLLBACK, DELETE)
+        ResponseEntity<com.atlaskv.server.api.dto.RevisionResponse[]> finalHist = restTemplate.getForEntity(
+                "/api/v1/kv/" + key + "/history?linearizable=false",
+                com.atlaskv.server.api.dto.RevisionResponse[].class);
+        assertThat(finalHist.getStatusCode()).isEqualTo(HttpStatus.OK);
+        com.atlaskv.server.api.dto.RevisionResponse[] allRevs = finalHist.getBody();
+        assertThat(allRevs).hasSize(6);
+        assertThat(allRevs[4].operation()).isEqualTo("ROLLBACK");
+        assertThat(allRevs[4].value()).isEqualTo("version-2-updated");
+        assertThat(allRevs[5].operation()).isEqualTo("DELETE");
+        assertThat(allRevs[5].value()).isNull();
+    }
 }
 

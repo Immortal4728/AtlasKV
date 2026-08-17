@@ -104,6 +104,10 @@ public final class WatchApi {
                 // Apply configured authentication (e.g. API key Bearer token)
                 client.authentication().apply(reqBuilder);
 
+                if (client.namespace() != null && !client.namespace().isBlank()) {
+                    reqBuilder.header("X-Namespace", client.namespace());
+                }
+
                 HttpRequest request = reqBuilder.build();
 
                 try {

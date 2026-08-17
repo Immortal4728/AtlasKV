@@ -5,11 +5,14 @@ import type {
   LeaderResponse,
   MetricsResponse,
   ClusterMembersResponse,
+  NodeDetail,
+  SnapshotResponse,
   KeyValueResponse,
   PrefixQueryResponse,
   LeaseResponse,
   LeaseRequest,
   CasConflictResponse,
+  KeyRevisionResponse,
   RevisionResponse,
   AddMemberRequest,
   HealthResponse,
@@ -18,6 +21,38 @@ import type {
 
 const DEFAULT_BASE_URL = '';
 const DEFAULT_TIMEOUT = 5000;
+const DEFAULT_METRICS_INTERVAL = 2;
+
+export function normalizeAndValidateServerUrl(url: string): { valid: boolean; normalized: string; error?: string } {
+  if (!url || !url.trim()) {
+    return { valid: true, normalized: '' };
+  }
+  let trimmed = url.trim();
+
+  // Reject malformed URLs with extra slashes after scheme (e.g. http:///localhost)
+  if (/^https?:\/\/\//i.test(trimmed)) {
+    return { valid: false, normalized: trimmed, error: 'Malformed URL: Contains invalid extra slashes (e.g. http:///)' };
+  }
+
+  // Prepend scheme if missing
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `http://${trimmed}`;
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return { valid: false, normalized: trimmed, error: 'Only http:// and https:// protocols are supported' };
+    }
+    if (!parsed.hostname) {
+      return { valid: false, normalized: trimmed, error: 'Invalid hostname in Server Base URL' };
+    }
+    let clean = parsed.origin + (parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/+$/, ''));
+    return { valid: true, normalized: clean };
+  } catch {
+    return { valid: false, normalized: trimmed, error: 'Invalid URL syntax (e.g. http://localhost:8081)' };
+  }
+}
 
 export function getSavedBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -28,11 +63,13 @@ export function getSavedBaseUrl(): string {
 
 export function setSavedBaseUrl(url: string): void {
   if (typeof window !== 'undefined') {
-    const trimmed = url.trim().replace(/\/+$/, '');
-    if (trimmed) {
-      localStorage.setItem('atlaskv-server-url', trimmed);
-    } else {
-      localStorage.removeItem('atlaskv-server-url');
+    const res = normalizeAndValidateServerUrl(url);
+    if (res.valid) {
+      if (res.normalized) {
+        localStorage.setItem('atlaskv-server-url', res.normalized);
+      } else {
+        localStorage.removeItem('atlaskv-server-url');
+      }
     }
   }
 }
@@ -73,10 +110,56 @@ export function setSavedAdminNamespace(namespace: string): void {
   }
 }
 
+export function getSavedTimeout(): number {
+  if (typeof window !== 'undefined') {
+    const val = localStorage.getItem('atlaskv-request-timeout');
+    if (val) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+  return DEFAULT_TIMEOUT;
+}
+
+export function setSavedTimeout(timeoutMs: number | string): void {
+  if (typeof window !== 'undefined') {
+    const parsed = typeof timeoutMs === 'number' ? timeoutMs : parseInt(timeoutMs, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      localStorage.setItem('atlaskv-request-timeout', parsed.toString());
+    } else {
+      localStorage.removeItem('atlaskv-request-timeout');
+    }
+  }
+}
+
+export function getSavedMetricsInterval(): number {
+  if (typeof window !== 'undefined') {
+    const val = localStorage.getItem('atlaskv-metrics-interval');
+    if (val) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed) && parsed > 0) return parsed;
+    }
+  }
+  return DEFAULT_METRICS_INTERVAL;
+}
+
+export function setSavedMetricsInterval(intervalSec: number | string): void {
+  if (typeof window !== 'undefined') {
+    const parsed = typeof intervalSec === 'number' ? intervalSec : parseInt(intervalSec, 10);
+    if (!isNaN(parsed) && parsed > 0) {
+      localStorage.setItem('atlaskv-metrics-interval', parsed.toString());
+    } else {
+      localStorage.removeItem('atlaskv-metrics-interval');
+    }
+  }
+}
+
 export function clearSavedCredentials(): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem('atlaskv-api-key');
     localStorage.removeItem('atlaskv-admin-namespace');
+    localStorage.removeItem('atlaskv-request-timeout');
+    localStorage.removeItem('atlaskv-metrics-interval');
   }
 }
 
@@ -116,6 +199,8 @@ httpClient.interceptors.request.use((config) => {
   if (baseUrl && !config.url?.startsWith('http')) {
     config.baseURL = baseUrl;
   }
+
+  config.timeout = getSavedTimeout();
 
   const apiKey = getSavedApiKey();
   if (apiKey && !config.headers.Authorization) {
@@ -178,7 +263,7 @@ httpClient.interceptors.response.use(
         throw new ConflictError(
           data.expectedVersion,
           data.currentVersion,
-          data.message || 'Version mismatch'
+          data.reason || data.message || 'Version mismatch'
         );
       }
 
@@ -226,6 +311,11 @@ export const ClusterApi = {
 
   async getMembers(): Promise<ClusterMembersResponse> {
     const res = await httpClient.get<ClusterMembersResponse>('/api/v1/cluster/members');
+    return res.data;
+  },
+
+  async getNodes(): Promise<NodeDetail[]> {
+    const res = await httpClient.get<NodeDetail[]>('/api/v1/cluster/nodes');
     return res.data;
   },
 
@@ -319,17 +409,30 @@ export const MetricsApi = {
 
 // ─── History API ─────────────────────────────────────────────────────────────
 export const HistoryApi = {
-  async getHistory(key: string): Promise<RevisionResponse> {
+  async getHistory(key: string): Promise<KeyRevisionResponse[]> {
     const cleanKey = cleanKeyPath(key);
-    const res = await httpClient.get<RevisionResponse>(`/api/v1/kv/${cleanKey}/history`);
+    const res = await httpClient.get<KeyRevisionResponse[]>(`/api/v1/kv/${cleanKey}/history`);
     return res.data;
   },
 
   async rollback(key: string, revision: number): Promise<KeyValueResponse> {
     const cleanKey = cleanKeyPath(key);
     const res = await httpClient.post<KeyValueResponse>(
-      `/api/v1/kv/${cleanKey}/rollback/${revision}`
+      `/api/v1/kv/${cleanKey}/rollback/${revision}`,
+      {}
     );
+    return res.data;
+  },
+};
+
+// ─── Admin API ───────────────────────────────────────────────────────────────
+export const AdminApi = {
+  async takeSnapshot(): Promise<SnapshotResponse> {
+    const res = await httpClient.post<SnapshotResponse>('/api/v1/admin/snapshot');
+    return res.data;
+  },
+  async shutdown(): Promise<{ status: string; message: string }> {
+    const res = await httpClient.post<{ status: string; message: string }>('/api/v1/admin/shutdown');
     return res.data;
   },
 };

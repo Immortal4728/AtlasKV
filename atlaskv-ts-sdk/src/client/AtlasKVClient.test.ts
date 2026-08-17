@@ -71,6 +71,29 @@ describe("AtlasKVClient & APIs Unit Tests", () => {
       );
     });
 
+    it("should propagate X-Namespace header when namespace is configured", async () => {
+      const nsClient = AtlasKVClient.builder()
+        .endpoint("http://localhost:8080")
+        .namespace("tenant-beta")
+        .build();
+
+      mockFetch.mockResolvedValueOnce({
+        status: 200,
+        text: async () => JSON.stringify({ key: "k3", value: "v3", exists: true }),
+      });
+
+      await nsClient.keyValue().get("k3");
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "http://localhost:8080/api/v1/kv/k3",
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            "X-Namespace": "tenant-beta",
+          }),
+        })
+      );
+    });
+
     it("should throw AtlasKVError on HTTP 401 Unauthorized without leaking secrets", async () => {
       mockFetch.mockResolvedValueOnce({
         status: 401,

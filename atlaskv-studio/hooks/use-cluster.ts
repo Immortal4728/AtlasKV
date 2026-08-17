@@ -2,7 +2,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ClusterApi, MetricsApi, HealthApi } from '@/services/api';
+import { ClusterApi, MetricsApi, HealthApi, AdminApi, getSavedMetricsInterval } from '@/services/api';
 import type { AddMemberRequest } from '@/types/api';
 
 const DEFAULT_REFETCH_INTERVAL = 3000;
@@ -26,10 +26,11 @@ export function useLeader() {
 }
 
 export function useMetrics() {
+  const intervalSec = typeof window !== 'undefined' ? getSavedMetricsInterval() : 2;
   return useQuery({
     queryKey: ['cluster', 'metrics'],
     queryFn: () => MetricsApi.getMetrics(),
-    refetchInterval: DEFAULT_REFETCH_INTERVAL,
+    refetchInterval: intervalSec * 1000,
     retry: 1,
   });
 }
@@ -38,6 +39,15 @@ export function useMembers() {
   return useQuery({
     queryKey: ['cluster', 'members'],
     queryFn: () => ClusterApi.getMembers(),
+    refetchInterval: DEFAULT_REFETCH_INTERVAL,
+    retry: 1,
+  });
+}
+
+export function useNodes() {
+  return useQuery({
+    queryKey: ['cluster', 'nodes'],
+    queryFn: () => ClusterApi.getNodes(),
     refetchInterval: DEFAULT_REFETCH_INTERVAL,
     retry: 1,
   });
@@ -59,6 +69,7 @@ export function useAddMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cluster', 'members'] });
       queryClient.invalidateQueries({ queryKey: ['cluster', 'status'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'nodes'] });
     },
   });
 }
@@ -70,6 +81,19 @@ export function useRemoveMember() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cluster', 'members'] });
       queryClient.invalidateQueries({ queryKey: ['cluster', 'status'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'nodes'] });
+    },
+  });
+}
+
+export function useTakeSnapshot() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => AdminApi.takeSnapshot(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'status'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'nodes'] });
     },
   });
 }

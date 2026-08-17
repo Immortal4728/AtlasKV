@@ -3,6 +3,7 @@ package com.atlaskv.server.api;
 import com.atlaskv.server.api.dto.ClusterStatusResponse;
 import com.atlaskv.server.api.dto.LeaderResponse;
 import com.atlaskv.server.api.dto.MetricsResponse;
+import com.atlaskv.server.api.dto.NodeDetailResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,7 +50,7 @@ class ClusterControllerIT {
     }
 
     @Test
-    @DisplayName("GET /api/v1/cluster/metrics returns 200 with metrics")
+    @DisplayName("GET /api/v1/cluster/metrics returns 200 with all metrics")
     void getMetricsReturns200() {
         ResponseEntity<MetricsResponse> response = restTemplate.getForEntity(
                 "/api/v1/cluster/metrics", MetricsResponse.class);
@@ -58,5 +59,25 @@ class ClusterControllerIT {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().nodeId()).isEqualTo("test-node");
         assertThat(response.getBody().kvStoreSize()).isGreaterThanOrEqualTo(0);
+        assertThat(response.getBody().activeWatchers()).isGreaterThanOrEqualTo(0L);
+        assertThat(response.getBody().totalEventsDelivered()).isGreaterThanOrEqualTo(0L);
+        assertThat(response.getBody().activeLeases()).isGreaterThanOrEqualTo(0L);
+        assertThat(response.getBody().expiredLeases()).isGreaterThanOrEqualTo(0L);
+    }
+
+    @Test
+    @DisplayName("GET /api/v1/cluster/nodes returns 200 with node details list")
+    void getNodesReturns200() {
+        ResponseEntity<NodeDetailResponse[]> response = restTemplate.getForEntity(
+                "/api/v1/cluster/nodes", NodeDetailResponse[].class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().length).isGreaterThanOrEqualTo(1);
+
+        NodeDetailResponse localNode = response.getBody()[0];
+        assertThat(localNode.id()).isEqualTo("test-node");
+        assertThat(localNode.isLocal()).isTrue();
+        assertThat(localNode.healthy()).isTrue();
     }
 }

@@ -66,6 +66,8 @@ public final class CommandDispatcher {
                 return handleLeaseRenew(cmd);
             case "LEASE_REVOKE":
                 return handleLeaseRevoke(cmd);
+            case "LEASE_EXPIRE":
+                return handleLeaseExpire(cmd);
             case "EXPIRE":
                 return handleExpire(cmd);
             case "CAS_PUT":
@@ -86,12 +88,12 @@ public final class CommandDispatcher {
 
     private byte[] handlePutHist(String cmd) {
         String[] histParts = cmd.split(" ", 4);
-        if (histParts.length < 4) {
+        if (histParts.length < 3) {
             return "ERROR: PUT_HIST requires nodeId, key, and value".getBytes(StandardCharsets.UTF_8);
         }
         String nodeId = histParts[1];
         String key = histParts[2];
-        String value = histParts[3];
+        String value = histParts.length >= 4 ? histParts[3] : "";
 
         StateMachineHelpers.cleanupKeyAssociations(stateMachine, key);
 
@@ -100,20 +102,20 @@ public final class CommandDispatcher {
 
         stateMachine.getStore().put(key, value);
         revisionManager.addRevision(key, newVer, value, "PUT", nodeId, null, null);
-        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value);
+        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value, newVer);
         return ("OK:" + key).getBytes(StandardCharsets.UTF_8);
     }
 
     private byte[] handlePutTtlHist(String cmd) {
         String[] histParts = cmd.split(" ", 6);
-        if (histParts.length < 6) {
+        if (histParts.length < 5) {
             return "ERROR: PUT_TTL_HIST requires nodeId, key, ttl, leaseId, and value".getBytes(StandardCharsets.UTF_8);
         }
         String nodeId = histParts[1];
         String key = histParts[2];
         String ttlStr = histParts[3];
         String leaseId = histParts[4];
-        String value = histParts[5];
+        String value = histParts.length >= 6 ? histParts[5] : "";
 
         StateMachineHelpers.cleanupKeyAssociations(stateMachine, key);
 
@@ -132,19 +134,19 @@ public final class CommandDispatcher {
         }
 
         if (!"NULL".equalsIgnoreCase(leaseId)) {
-            LeaseInfo lease = stateMachine.getLeases().computeIfPresent(leaseId, (lid, leaseInfo) -> {
-                leaseInfo.keys().add(key);
-                return leaseInfo;
-            });
-            if (lease != null) {
+            LeaseInfo lease = stateMachine.getLeases().get(leaseId);
+            if (lease != null && lease.status() == LeaseStatus.ACTIVE) {
+                lease.keys().add(key);
                 stateMachine.getKeyToLease().put(key, leaseId);
+            } else if (lease != null) {
+                return ("ERROR: lease is not active (" + lease.status() + ") " + leaseId).getBytes(StandardCharsets.UTF_8);
             } else {
                 return ("ERROR: lease not found " + leaseId).getBytes(StandardCharsets.UTF_8);
             }
         }
 
         revisionManager.addRevision(key, newVer, value, "PUT", nodeId, leaseId, ttlStr);
-        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value);
+        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value, newVer);
         return ("OK:" + key).getBytes(StandardCharsets.UTF_8);
     }
 
@@ -167,7 +169,7 @@ public final class CommandDispatcher {
                 newVer = list.get(list.size() - 1).revisionNumber() + 1;
             }
             revisionManager.addRevision(key, newVer, null, "DELETE", nodeId, null, null);
-            StateMachineHelpers.notifyListeners(stateMachine, "DELETE", key, null);
+            StateMachineHelpers.notifyListeners(stateMachine, "DELETE", key, null, newVer);
             return ("DELETED:" + key).getBytes(StandardCharsets.UTF_8);
         }
         return ("NOT_FOUND:" + key).getBytes(StandardCharsets.UTF_8);
@@ -203,7 +205,7 @@ public final class CommandDispatcher {
 
         stateMachine.getStore().put(key, value);
         revisionManager.addRevision(key, newVer, value, "PUT", nodeId, null, null);
-        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value);
+        StateMachineHelpers.notifyListeners(stateMachine, "PUT", key, value, newVer);
         return ("OK:" + key).getBytes(StandardCharsets.UTF_8);
     }
 
@@ -225,7 +227,7 @@ public final class CommandDispatcher {
                 newVer = list.get(list.size() - 1).revisionNumber() + 1;
             }
             revisionManager.addRevision(key, newVer, null, "EXPIRE", nodeId, null, null);
-            StateMachineHelpers.notifyListeners(stateMachine, "EXPIRE", key, null);
+            StateMachineHelpers.notifyListeners(stateMachine, "EXPIRE", key, null, newVer);
         }
         return ("EXPIRED:" + key).getBytes(StandardCharsets.UTF_8);
     }
@@ -273,12 +275,12 @@ public final class CommandDispatcher {
         }
 
         if (!"NULL".equalsIgnoreCase(leaseId)) {
-            LeaseInfo lease = stateMachine.getLeases().computeIfPresent(leaseId, (lid, leaseInfo) -> {
-                leaseInfo.keys().add(key);
-                return leaseInfo;
-            });
-            if (lease != null) {
+            LeaseInfo lease = stateMachine.getLeases().get(leaseId);
+            if (lease != null && lease.status() == LeaseStatus.ACTIVE) {
+                lease.keys().add(key);
                 stateMachine.getKeyToLease().put(key, leaseId);
+            } else if (lease != null) {
+                return ("ERROR: lease is not active (" + lease.status() + ") " + leaseId).getBytes(StandardCharsets.UTF_8);
             } else {
                 return ("ERROR: lease not found " + leaseId).getBytes(StandardCharsets.UTF_8);
             }
@@ -317,6 +319,14 @@ public final class CommandDispatcher {
             return "ERROR: LEASE_REVOKE requires leaseId".getBytes(StandardCharsets.UTF_8);
         }
         return leaseStateManager.revokeLease(leaseParts[1]);
+    }
+
+    private byte[] handleLeaseExpire(String cmd) {
+        String[] leaseParts = cmd.split(" ", 2);
+        if (leaseParts.length < 2) {
+            return "ERROR: LEASE_EXPIRE requires leaseId".getBytes(StandardCharsets.UTF_8);
+        }
+        return leaseStateManager.expireLease(leaseParts[1]);
     }
 
     private byte[] handleExpire(String cmd) {

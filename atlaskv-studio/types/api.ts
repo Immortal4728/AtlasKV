@@ -23,6 +23,24 @@ export interface LeaderResponse {
   currentTerm: number;
 }
 
+export interface NodeDetail {
+  id: string;
+  host: string;
+  port: number;
+  grpcPort: number;
+  role: RaftRole;
+  healthy: boolean;
+  term: number;
+  commitIndex: number;
+  appliedIndex: number;
+  matchIndex?: number;
+  nextIndex?: number;
+  isLeader: boolean;
+  isLocal: boolean;
+  latencyMs: number;
+  peers: number;
+}
+
 export interface MetricsResponse {
   nodeId: string;
   currentTerm: number;
@@ -49,6 +67,13 @@ export interface MetricsResponse {
   historyWrites?: number;
   rollbackCount?: number;
   averageHistorySize?: number;
+  activeWatchers?: number;
+  totalEventsDelivered?: number;
+  totalWatchConnections?: number;
+  activeLeases?: number;
+  expiredLeases?: number;
+  leaseRenewals?: number;
+  averageLeaseDurationMs?: number;
 }
 
 export interface ClusterMembersResponse {
@@ -57,6 +82,12 @@ export interface ClusterMembersResponse {
   oldMembers: string[];
   newMembers: string[];
   leaderId: string | null;
+}
+
+export interface SnapshotResponse {
+  success: boolean;
+  lastIncludedIndex: number;
+  lastIncludedTerm: number;
 }
 
 export interface KeyValueResponse {
@@ -93,6 +124,9 @@ export interface LeaseResponse {
   durationMs: number;
   expiryTimeMs: number;
   keys: string[];
+  status?: 'ACTIVE' | 'EXPIRED' | 'REVOKED';
+  createdAtMs?: number | null;
+  lastActionTimeMs?: number | null;
 }
 
 export interface LeaseRequest {
@@ -103,21 +137,23 @@ export interface LeaseRequest {
 export interface CasConflictResponse {
   expectedVersion: number;
   currentVersion: number;
+  reason?: string;
   message?: string;
 }
 
-export interface RevisionItem {
-  version: number;
+export interface KeyRevisionResponse {
+  revisionNumber: number;
   value: string | null;
   timestamp: number;
-  nodeLeader?: string;
+  operation: 'PUT' | 'DELETE' | 'EXPIRE' | 'ROLLBACK' | string;
+  nodeId?: string;
+  leaseId?: string | null;
+  ttl?: string | null;
 }
 
-export interface RevisionResponse {
-  key: string;
-  revisions: RevisionItem[];
-  currentVersion: number;
-}
+// Backward compatibility aliases
+export type RevisionItem = KeyRevisionResponse;
+export type RevisionResponse = KeyRevisionResponse[];
 
 export interface WatchEvent {
   type: 'PUT' | 'DELETE' | 'EXPIRE' | 'STATUS';
@@ -146,4 +182,3 @@ export interface AuthInfoResponse {
   role: UserRole;
   namespace: string;
 }
-

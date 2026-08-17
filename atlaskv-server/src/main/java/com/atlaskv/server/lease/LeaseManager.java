@@ -95,12 +95,22 @@ public final class LeaseManager implements AutoCloseable {
     }
 
     /**
-     * Returns active leases registered in the state machine.
+     * Returns active and historical leases registered in the state machine.
      *
      * @return collection of leases
      */
     public Collection<LeaseInfo> listLeases() {
         return stateMachine.leases().values();
+    }
+
+    /**
+     * Gets a lease by ID from the state machine.
+     *
+     * @param leaseId lease ID
+     * @return LeaseInfo or null
+     */
+    public LeaseInfo getLease(String leaseId) {
+        return stateMachine.leases().get(leaseId);
     }
 
     private void checkExpirations() {
@@ -124,16 +134,16 @@ public final class LeaseManager implements AutoCloseable {
             }
         }
 
-        // 2. Scan and revoke expired leases
+        // 2. Scan and expire leases
         for (LeaseInfo lease : stateMachine.leases().values()) {
-            if (now > lease.expiryTimeMs()) {
+            if (lease.status() == com.atlaskv.server.statemachine.LeaseStatus.ACTIVE && now > lease.expiryTimeMs()) {
                 String leaseId = lease.leaseId();
-                LOG.info("Leader detected expired lease [{}], submitting LEASE_REVOKE command", leaseId);
+                LOG.info("Leader detected expired lease [{}], submitting LEASE_EXPIRE command", leaseId);
                 try {
-                    submitCommand("LEASE_REVOKE " + leaseId);
+                    submitCommand("LEASE_EXPIRE " + leaseId);
                     metrics.recordLeaseExpired();
                 } catch (Exception e) {
-                    LOG.error("Failed to submit LEASE_REVOKE for leaseId: {}", leaseId, e);
+                    LOG.error("Failed to submit LEASE_EXPIRE for leaseId: {}", leaseId, e);
                 }
             }
         }

@@ -11,6 +11,10 @@ import {
   setSavedAdminNamespace,
   getSavedBaseUrl,
   setSavedBaseUrl,
+  getSavedTimeout,
+  setSavedTimeout,
+  getSavedMetricsInterval,
+  setSavedMetricsInterval,
   clearSavedCredentials,
 } from '@/services/api';
 import type { AuthInfoResponse } from '@/types/api';
@@ -32,11 +36,15 @@ export function useAuth() {
   const [apiKey, setLocalApiKey] = useState<string>('');
   const [adminNamespace, setLocalAdminNamespace] = useState<string>('');
   const [serverUrl, setLocalServerUrl] = useState<string>('');
+  const [timeoutMs, setLocalTimeoutMs] = useState<number>(5000);
+  const [refreshIntervalSec, setLocalRefreshIntervalSec] = useState<number>(2);
 
   useEffect(() => {
     setLocalApiKey(getSavedApiKey());
     setLocalAdminNamespace(getSavedAdminNamespace());
     setLocalServerUrl(getSavedBaseUrl());
+    setLocalTimeoutMs(getSavedTimeout());
+    setLocalRefreshIntervalSec(getSavedMetricsInterval());
   }, []);
 
   const { data: authInfo, isLoading, isError, error, refetch } = useAuthInfo();
@@ -73,10 +81,26 @@ export function useAuth() {
     [queryClient]
   );
 
+  const updateTimeoutMs = useCallback((ms: number | string) => {
+    setSavedTimeout(ms);
+    setLocalTimeoutMs(getSavedTimeout());
+  }, []);
+
+  const updateRefreshIntervalSec = useCallback(
+    (sec: number | string) => {
+      setSavedMetricsInterval(sec);
+      setLocalRefreshIntervalSec(getSavedMetricsInterval());
+      queryClient.invalidateQueries({ queryKey: ['cluster', 'metrics'] });
+    },
+    [queryClient]
+  );
+
   const disconnect = useCallback(() => {
     clearSavedCredentials();
     setLocalApiKey('');
     setLocalAdminNamespace('');
+    setLocalTimeoutMs(5000);
+    setLocalRefreshIntervalSec(2);
     queryClient.invalidateQueries();
   }, [queryClient]);
 
@@ -95,6 +119,8 @@ export function useAuth() {
     apiKey,
     adminNamespace,
     serverUrl,
+    timeoutMs,
+    refreshIntervalSec,
     isAdmin,
     isUser,
     activeNamespace,
@@ -105,6 +131,8 @@ export function useAuth() {
     updateApiKey,
     updateAdminNamespace,
     updateServerUrl,
+    updateTimeoutMs,
+    updateRefreshIntervalSec,
     disconnect,
   };
 }

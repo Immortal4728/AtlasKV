@@ -18,11 +18,23 @@ public final class AtlasKVClientBuilder {
     private Duration timeout = Duration.ofSeconds(5);
     private RetryPolicy retryPolicy = RetryPolicy.defaultPolicy();
     private Authentication authentication = Authentication.none();
+    private String namespace = null;
 
     /**
      * Package-private constructor to enforce builder usage via {@link AtlasKVClient#builder()}.
      */
     AtlasKVClientBuilder() {}
+
+    /**
+     * Sets the target namespace for multi-tenant isolation.
+     *
+     * @param namespace target namespace
+     * @return builder instance
+     */
+    public AtlasKVClientBuilder namespace(String namespace) {
+        this.namespace = namespace;
+        return this;
+    }
 
     /**
      * Sets the remote endpoint URI of the AtlasKV server (e.g. "https://atlaskv.example.com" or "http://localhost:8081").
@@ -136,6 +148,6 @@ public final class AtlasKVClientBuilder {
      */
     public AtlasKVClient build() {
         URI effectiveUri = baseUri != null ? baseUri : URI.create("http://" + host + ":" + port);
-        return new AtlasKVClient(effectiveUri, timeout, retryPolicy, authentication);
+        return new AtlasKVClient(effectiveUri, timeout, retryPolicy, authentication, namespace);
     }
 }

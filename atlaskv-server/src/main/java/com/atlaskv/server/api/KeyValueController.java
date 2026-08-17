@@ -14,6 +14,7 @@ import com.atlaskv.server.metrics.ReadMetrics;
 import com.atlaskv.server.security.NamespaceResolver;
 import com.atlaskv.server.statemachine.KeyMetadata;
 import com.atlaskv.server.statemachine.KeyValueStateMachine;
+import com.atlaskv.server.statemachine.LeaseInfo;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -63,23 +64,13 @@ public class KeyValueController {
 
     /**
      * Constructs the KeyValueController with defaults.
-     *
-     * @param lifecycleManager node lifecycle manager
-     * @param stateMachine key-value state machine
      */
-    public KeyValueController(NodeLifecycleManager lifecycleManager,
-                              KeyValueStateMachine stateMachine) {
+    public KeyValueController(NodeLifecycleManager lifecycleManager, KeyValueStateMachine stateMachine) {
         this(lifecycleManager, stateMachine, new ReadMetrics(), new CasMetrics(), new HistoryMetrics());
     }
 
     /**
      * Constructs the KeyValueController with metrics.
-     *
-     * @param lifecycleManager node lifecycle manager
-     * @param stateMachine key-value state machine
-     * @param readMetrics read latency metrics recorder
-     * @param casMetrics CAS metrics recorder
-     * @param historyMetrics history metrics recorder
      */
     @Autowired
     public KeyValueController(NodeLifecycleManager lifecycleManager,
@@ -96,11 +87,6 @@ public class KeyValueController {
 
     /**
      * Handles GET requests for key lookup or history.
-     *
-     * @param key target key
-     * @param linearizable whether read requires ReadIndex
-     * @param request HTTP servlet request
-     * @return response
      */
     @GetMapping("/{key}/**")
     @Operation(summary = "Read a value by key or retrieve revision history")
@@ -113,6 +99,43 @@ public class KeyValueController {
             return getHistory(linearizable, request);
         }
         return get(linearizable, request);
+    }
+
+    private record KeyTtlInfo(Long ttlRemaining, String clientLeaseId, boolean isExpired) {}
+
+    private KeyTtlInfo resolveKeyTtl(String storageKey, String namespace) {
+        long now = System.currentTimeMillis();
+        Long ttlRemaining = null;
+        boolean expired = false;
+
+        Long expiry = stateMachine.keyTtls().get(storageKey);
+        if (expiry != null) {
+            long remaining = expiry - now;
+            if (remaining <= 0) {
+                expired = true;
+            } else {
+                ttlRemaining = remaining;
+            }
+        }
+
+        String storageLeaseId = stateMachine.keyToLease().get(storageKey);
+        String clientLeaseId = null;
+        if (storageLeaseId != null) {
+            clientLeaseId = NamespaceResolver.toClientLeaseId(storageLeaseId, namespace);
+            LeaseInfo lease = stateMachine.leases().get(storageLeaseId);
+            if (lease == null || lease.status() != com.atlaskv.server.statemachine.LeaseStatus.ACTIVE) {
+                expired = true;
+            } else {
+                long leaseRemaining = lease.expiryTimeMs() - now;
+                if (leaseRemaining <= 0) {
+                    expired = true;
+                } else {
+                    ttlRemaining = (ttlRemaining == null) ? leaseRemaining : Math.min(ttlRemaining, leaseRemaining);
+                }
+            }
+        }
+
+        return new KeyTtlInfo(ttlRemaining, clientLeaseId, expired);
     }
 
     private ResponseEntity<KeyValueResponse> get(boolean linearizable, HttpServletRequest request) {
@@ -129,12 +152,20 @@ public class KeyValueController {
         }
 
         Optional<String> value = stateMachine.get(storageKey);
-        KeyMetadata meta = stateMachine.metadata().get(storageKey);
+        KeyTtlInfo ttlInfo = resolveKeyTtl(storageKey, namespace);
+
+        if (ttlInfo.isExpired()) {
+            value = Optional.empty();
+        }
+
+        KeyMetadata meta = value.isPresent() ? stateMachine.metadata().get(storageKey) : null;
         KeyValueResponse response = new KeyValueResponse(
                 clientKey, value.orElse(null), value.isPresent(),
                 meta != null ? meta.version() : null,
                 meta != null ? meta.createdAt() : null,
-                meta != null ? meta.updatedAt() : null);
+                meta != null ? meta.updatedAt() : null,
+                value.isPresent() ? ttlInfo.ttlRemaining() : null,
+                value.isPresent() ? ttlInfo.clientLeaseId() : null);
 
         return value.isPresent()
                 ? ResponseEntity.ok(response)
@@ -143,17 +174,12 @@ public class KeyValueController {
 
     /**
      * Handles POST requests for writing key-value or rollback.
-     *
-     * @param key target key
-     * @param requestBody request body
-     * @param request HTTP request
-     * @return response
      */
     @PostMapping("/{key}/**")
     @Operation(summary = "Write a key-value pair or rollback to a revision")
     public ResponseEntity<?> handlePost(
             @PathVariable @NotBlank String key,
-            @RequestBody(required = false) @Valid KeyValueRequest requestBody,
+            @RequestBody(required = false) KeyValueRequest requestBody,
             HttpServletRequest request) {
         String uri = request.getRequestURI();
         int rollbackIdx = uri.indexOf("/rollback/");
@@ -165,7 +191,7 @@ public class KeyValueController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
             }
         }
-        if (requestBody == null) {
+        if (requestBody == null || requestBody.value() == null) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
         return put(requestBody, request);
@@ -191,27 +217,28 @@ public class KeyValueController {
         }
 
         byte[] result = submitCommand(node, command);
-        boolean success = new String(result, StandardCharsets.UTF_8).startsWith("OK");
+        String resultStr = new String(result, StandardCharsets.UTF_8);
+        if (resultStr.startsWith("ERROR:")) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, resultStr.substring(6).trim());
+        }
+        boolean success = resultStr.startsWith("OK");
         if (success) {
             historyMetrics.recordWrite();
         }
         KeyMetadata meta = success ? stateMachine.metadata().get(storageKey) : null;
+        KeyTtlInfo ttlInfo = success ? resolveKeyTtl(storageKey, namespace) : new KeyTtlInfo(null, null, false);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(new KeyValueResponse(clientKey, request.value(), success,
                         meta != null ? meta.version() : null,
                         meta != null ? meta.createdAt() : null,
-                        meta != null ? meta.updatedAt() : null));
+                        meta != null ? meta.updatedAt() : null,
+                        ttlInfo.ttlRemaining(),
+                        ttlInfo.clientLeaseId()));
     }
 
     /**
      * Writes a key-value pair with Compare-And-Swap (CAS).
-     *
-     * @param key target key
-     * @param request request body
-     * @param headerVersion If-Version header
-     * @param paramVersion expectedVersion param
-     * @param requestContext HTTP request
-     * @return response
      */
     @PutMapping("/{key}/**")
     @Operation(summary = "Write a key-value pair with Compare-And-Swap (CAS)")
@@ -253,11 +280,14 @@ public class KeyValueController {
             casMetrics.recordSuccess();
             historyMetrics.recordWrite();
             KeyMetadata meta = stateMachine.metadata().get(storageKey);
+            KeyTtlInfo ttlInfo = resolveKeyTtl(storageKey, namespace);
             return ResponseEntity.ok(new KeyValueResponse(
                     clientKey, request.value(), true,
                     meta != null ? meta.version() : null,
                     meta != null ? meta.createdAt() : null,
-                    meta != null ? meta.updatedAt() : null));
+                    meta != null ? meta.updatedAt() : null,
+                    ttlInfo.ttlRemaining(),
+                    ttlInfo.clientLeaseId()));
         }
 
         casMetrics.recordFailure();
@@ -278,10 +308,6 @@ public class KeyValueController {
 
     /**
      * Deletes a key-value pair through Raft consensus.
-     *
-     * @param key target key
-     * @param request HTTP request
-     * @return response
      */
     @DeleteMapping("/{key}/**")
     @Operation(summary = "Delete a key-value pair")
@@ -320,12 +346,15 @@ public class KeyValueController {
         }
         List<RevisionResponse> responses = new ArrayList<>();
         for (var rev : revisions) {
-            String clientLeaseId = rev.leaseId() != null
+            String clientLeaseId = (rev.leaseId() != null && !"NULL".equalsIgnoreCase(rev.leaseId()))
                     ? NamespaceResolver.toClientLeaseId(rev.leaseId(), namespace)
+                    : null;
+            String ttlStr = (rev.ttl() != null && !"NULL".equalsIgnoreCase(rev.ttl()))
+                    ? rev.ttl()
                     : null;
             responses.add(new RevisionResponse(
                     rev.revisionNumber(), rev.value(), rev.timestamp(),
-                    rev.operation(), rev.nodeId(), clientLeaseId, rev.ttl()));
+                    rev.operation(), rev.nodeId(), clientLeaseId, ttlStr));
         }
         return ResponseEntity.ok(responses);
     }
@@ -349,12 +378,15 @@ public class KeyValueController {
         historyMetrics.recordWrite();
         Optional<String> value = stateMachine.get(storageKey);
         KeyMetadata meta = stateMachine.metadata().get(storageKey);
+        KeyTtlInfo ttlInfo = resolveKeyTtl(storageKey, namespace);
 
         return ResponseEntity.ok(new KeyValueResponse(
                 clientKey, value.orElse(null), true,
                 meta != null ? meta.version() : null,
                 meta != null ? meta.createdAt() : null,
-                meta != null ? meta.updatedAt() : null));
+                meta != null ? meta.updatedAt() : null,
+                ttlInfo.ttlRemaining(),
+                ttlInfo.clientLeaseId()));
     }
 
     private void waitForReadIndex() {

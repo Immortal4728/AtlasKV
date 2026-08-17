@@ -1,6 +1,6 @@
 'use client';
 
-import { useClusterStatus, useMetrics, useMembers } from '@/hooks/use-cluster';
+import { useClusterStatus, useMetrics, useMembers, useNodes } from '@/hooks/use-cluster';
 import { useLeases } from '@/hooks/use-leases';
 import { StatCard } from '@/components/dashboard/stat-card';
 import { ClusterHealthBanner } from '@/components/dashboard/cluster-health-banner';
@@ -11,24 +11,20 @@ import { ActivityAndLogs } from '@/components/dashboard/activity-and-logs';
 import { RaftClusterViz } from '@/components/ui/raft-cluster-viz';
 import { PageHeader } from '@/components/ui/page-header';
 import { useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
 import {
   Activity,
   Hash,
   GitCommitHorizontal,
-  CheckCheck,
-  ScrollText,
   Database,
   Timer,
-  Zap,
-  Clock,
-  Server,
   Radio,
+  Eye,
+  Clock,
 } from 'lucide-react';
-import { toast } from 'sonner';
 
 function formatLatency(ms: number | undefined): string {
-  if (ms === undefined || ms === null || ms === 0) return '0.4ms';
+  if (ms === undefined || ms === null) return '0.0ms';
+  if (ms === 0) return '<0.1ms';
   if (ms < 1) return `${(ms * 1000).toFixed(0)}µs`;
   return `${ms.toFixed(2)}ms`;
 }
@@ -42,9 +38,10 @@ export default function DashboardPage() {
   } = useClusterStatus();
   const { data: metrics, isLoading: metricsLoading } = useMetrics();
   const { data: members, isLoading: membersLoading } = useMembers();
+  const { data: nodes, isLoading: nodesLoading } = useNodes();
   const { data: leases, isLoading: leasesLoading } = useLeases();
 
-  const isLoading = statusLoading || metricsLoading || membersLoading || leasesLoading;
+  const isLoading = statusLoading || metricsLoading || membersLoading || nodesLoading || leasesLoading;
 
   if (statusError && !status) {
     return (
@@ -57,29 +54,35 @@ export default function DashboardPage() {
     );
   }
 
-  const leader = status?.currentLeader ?? 'node1';
-  const term = status?.currentTerm ?? 3;
-  const commitIdx = metrics?.commitIndex ?? status?.commitIndex ?? 45;
+  const leader = status?.currentLeader ?? (nodes?.find((n) => n.isLeader)?.id ?? 'node1');
+  const term = status?.currentTerm ?? 0;
+  const commitIdx = metrics?.commitIndex ?? status?.commitIndex ?? 0;
+  const totalStoreKeys = metrics?.kvStoreSize ?? 0;
+  const activeWatchers = metrics?.activeWatchers ?? 0;
+  const activeLeases = metrics?.activeLeases ?? (leases?.filter((l) => l.status === 'ACTIVE').length ?? 0);
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
       {/* Page Header */}
       <PageHeader
         title="Cluster Overview"
-        description="Cluster overview and health metrics."
+        description="Real-time consensus health, topology, and key-value store metrics."
         icon={Activity}
         iconColor="text-emerald-400"
         badge={
           <span className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            Raft v2.0 Online
+            Raft Consensus Online
           </span>
         }
       />
 
       {/* Quick Actions Panel */}
       <QuickActionsBar
-        onTriggerSnapshot={() => queryClient.invalidateQueries({ queryKey: ['cluster'] })}
+        nodes={nodes}
+        leaderId={leader}
+        commitIndex={commitIdx}
+        term={term}
         onForceElection={() => queryClient.invalidateQueries({ queryKey: ['cluster'] })}
       />
 
@@ -101,7 +104,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <Radio className="h-4 w-4 text-emerald-400 animate-pulse" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--foreground)] font-mono">
-                Live 3-Node Raft Cluster Topology
+                Live Raft Cluster Topology ({nodes?.length ?? 3} Nodes)
               </h3>
             </div>
             <span className="text-[10px] font-mono text-neutral-400">
@@ -110,13 +113,23 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex-1 w-full relative min-h-[280px]">
-            <RaftClusterViz />
+            <RaftClusterViz
+              nodes={nodes}
+              leaderId={leader}
+              term={term}
+              commitIndex={commitIdx}
+            />
           </div>
         </div>
 
         {/* Node Status & Replication Matrix (5 cols) */}
         <div className="lg:col-span-5">
-          <ReplicationMatrix leaderId={leader} commitIndex={commitIdx} term={term} />
+          <ReplicationMatrix
+            nodes={nodes}
+            leaderId={leader}
+            commitIndex={commitIdx}
+            term={term}
+          />
         </div>
       </div>
 
@@ -142,7 +155,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total Store Keys"
-          value={(metrics?.kvStoreSize ?? 8648).toLocaleString()}
+          value={totalStoreKeys.toLocaleString()}
           icon={Database}
           accentColor="amber"
           subtitle="Active key-value entries"
@@ -160,7 +173,47 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Section 3: Live Activity Stream & Raft Consensus Logs */}
+      {/* Section 3: Observability Quick Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Active Watchers"
+          value={activeWatchers}
+          icon={Eye}
+          accentColor="purple"
+          subtitle="Connected SSE event streams"
+          loading={isLoading}
+          delay={0}
+        />
+        <StatCard
+          title="Active Leases"
+          value={activeLeases}
+          icon={Clock}
+          accentColor="cyan"
+          subtitle="TTL lease allocations"
+          loading={isLoading}
+          delay={1}
+        />
+        <StatCard
+          title="Events Delivered"
+          value={(metrics?.totalEventsDelivered ?? 0).toLocaleString()}
+          icon={Activity}
+          accentColor="emerald"
+          subtitle="Total SSE events published"
+          loading={isLoading}
+          delay={2}
+        />
+        <StatCard
+          title="CAS Operations"
+          value={(metrics?.totalCasAttempts ?? 0).toLocaleString()}
+          icon={Hash}
+          accentColor="blue"
+          subtitle={`${metrics?.successfulCasRequests ?? 0} ok / ${metrics?.failedCasRequests ?? 0} conflicts`}
+          loading={isLoading}
+          delay={3}
+        />
+      </div>
+
+      {/* Section 4: Live Activity Stream & Raft Consensus Logs */}
       <ActivityAndLogs />
     </div>
   );

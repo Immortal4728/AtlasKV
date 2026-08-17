@@ -33,7 +33,7 @@ public final class SnapshotManager {
              DataOutputStream dos = new DataOutputStream(baos)) {
             // Version marker
             dos.writeInt(-999);
-            dos.writeInt(4); // Upgraded to version 4 to support history
+            dos.writeInt(5); // Upgraded to version 5 to support lease lifecycle history
 
             // 1. Store
             dos.writeInt(stateMachine.getStore().size());
@@ -49,12 +49,15 @@ public final class SnapshotManager {
                 dos.writeLong(entry.getValue());
             }
 
-            // 3. Leases
+            // 3. Leases (with full lifecycle status & timestamps)
             dos.writeInt(stateMachine.getLeases().size());
             for (LeaseInfo lease : stateMachine.getLeases().values()) {
                 dos.writeUTF(lease.leaseId());
                 dos.writeLong(lease.durationMs());
                 dos.writeLong(lease.expiryTimeMs());
+                dos.writeLong(lease.createdAtMs());
+                dos.writeLong(lease.lastActionTimeMs());
+                dos.writeUTF(lease.status() != null ? lease.status().name() : LeaseStatus.ACTIVE.name());
                 dos.writeInt(lease.keys().size());
                 for (String k : lease.keys()) {
                     dos.writeUTF(k);
@@ -121,7 +124,7 @@ public final class SnapshotManager {
             int firstInt = dis.readInt();
             if (firstInt == -999) {
                 int version = dis.readInt();
-                if (version == 2 || version == 3 || version == 4) {
+                if (version >= 2 && version <= 5) {
                     // Read store
                     int count = dis.readInt();
                     for (int i = 0; i < count; i++) {
@@ -140,7 +143,26 @@ public final class SnapshotManager {
                         String leaseId = dis.readUTF();
                         long durationMs = dis.readLong();
                         long expiryTimeMs = dis.readLong();
-                        LeaseInfo lease = new LeaseInfo(leaseId, durationMs, expiryTimeMs);
+                        long createdAtMs;
+                        long lastActionTimeMs;
+                        LeaseStatus status;
+
+                        if (version >= 5) {
+                            createdAtMs = dis.readLong();
+                            lastActionTimeMs = dis.readLong();
+                            String statusStr = dis.readUTF();
+                            try {
+                                status = LeaseStatus.valueOf(statusStr);
+                            } catch (IllegalArgumentException e) {
+                                status = LeaseStatus.ACTIVE;
+                            }
+                        } else {
+                            createdAtMs = expiryTimeMs - durationMs;
+                            lastActionTimeMs = expiryTimeMs;
+                            status = LeaseStatus.ACTIVE;
+                        }
+
+                        LeaseInfo lease = new LeaseInfo(leaseId, durationMs, expiryTimeMs, createdAtMs, lastActionTimeMs, status);
                         int keysCount = dis.readInt();
                         for (int j = 0; j < keysCount; j++) {
                             lease.keys().add(dis.readUTF());
@@ -154,7 +176,7 @@ public final class SnapshotManager {
                         stateMachine.getKeyToLease().put(dis.readUTF(), dis.readUTF());
                     }
 
-                    // Read KeyMetadata if version is 3 or 4
+                    // Read KeyMetadata if version is 3, 4, or 5
                     if (version >= 3) {
                         int metaCount = dis.readInt();
                         for (int i = 0; i < metaCount; i++) {
@@ -166,8 +188,8 @@ public final class SnapshotManager {
                         }
                     }
 
-                    // Read History if version is 4
-                    if (version == 4) {
+                    // Read History if version is 4 or 5
+                    if (version >= 4) {
                         int historyCount = dis.readInt();
                         for (int i = 0; i < historyCount; i++) {
                             String key = dis.readUTF();

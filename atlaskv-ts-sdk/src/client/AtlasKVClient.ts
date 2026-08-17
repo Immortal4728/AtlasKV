@@ -18,6 +18,7 @@ export interface AtlasKVClientConfig {
   timeoutMs?: number;
   retryPolicy?: RetryPolicy;
   authentication?: AuthenticationApplyFn;
+  namespace?: string;
 }
 
 /**
@@ -37,20 +38,23 @@ export class AtlasKVClient {
     port?: number,
     timeoutMs?: number,
     retryPolicy?: RetryPolicy,
-    authentication?: AuthenticationApplyFn
+    authentication?: AuthenticationApplyFn,
+    namespace?: string
   );
   constructor(
     configOrHost: AtlasKVClientConfig | string = "localhost",
     port = 8080,
     timeoutMs = 5000,
     retryPolicy: RetryPolicy = RetryPolicy.defaultPolicy(),
-    authentication: AuthenticationApplyFn = Authentication.none()
+    authentication: AuthenticationApplyFn = Authentication.none(),
+    namespace?: string
   ) {
     let effectiveHost: string;
     let effectivePort = port;
     let effectiveTimeout = timeoutMs;
     let effectiveRetry = retryPolicy;
     let effectiveAuth = authentication;
+    let effectiveNamespace = namespace;
 
     if (typeof configOrHost === "object" && configOrHost !== null) {
       const config = configOrHost;
@@ -58,6 +62,7 @@ export class AtlasKVClient {
       effectivePort = config.port ?? 8080;
       effectiveTimeout = config.timeoutMs ?? 5000;
       effectiveRetry = config.retryPolicy ?? RetryPolicy.defaultPolicy();
+      effectiveNamespace = config.namespace;
       if (config.apiKey) {
         effectiveAuth = Authentication.bearer(config.apiKey);
       } else if (config.authentication) {
@@ -74,7 +79,8 @@ export class AtlasKVClient {
       effectivePort,
       effectiveTimeout,
       effectiveRetry,
-      effectiveAuth
+      effectiveAuth,
+      effectiveNamespace
     );
     this._keyValueApi = new KeyValueApi(this.httpClient);
     this._leaseApi = new LeaseApi(this.httpClient);

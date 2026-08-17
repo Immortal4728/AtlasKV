@@ -27,6 +27,25 @@ public final class StateMachineHelpers {
     }
 
     /**
+     * Notifies all registered listeners of a state change event with explicit version.
+     *
+     * @param stateMachine the state machine instance
+     * @param operation    the operation type
+     * @param key          the mutated key
+     * @param value        the mutated value
+     * @param version      the version of the key
+     */
+    public static void notifyListeners(KeyValueStateMachine stateMachine,
+                                       String operation,
+                                       String key,
+                                       String value,
+                                       Long version) {
+        for (KeyValueStateMachine.Listener l : stateMachine.getListeners()) {
+            l.onEvent(operation, key, value, version);
+        }
+    }
+
+    /**
      * Notifies all registered listeners of a state change event.
      *
      * @param stateMachine the state machine instance
@@ -35,8 +54,16 @@ public final class StateMachineHelpers {
      * @param value        the mutated value
      */
     public static void notifyListeners(KeyValueStateMachine stateMachine, String operation, String key, String value) {
-        for (KeyValueStateMachine.Listener l : stateMachine.getListeners()) {
-            l.onEvent(operation, key, value);
+        Long version = null;
+        KeyMetadata meta = stateMachine.metadata().get(key);
+        if (meta != null) {
+            version = meta.version();
+        } else {
+            java.util.List<KeyRevision> hist = stateMachine.history().get(key);
+            if (hist != null && !hist.isEmpty()) {
+                version = hist.get(hist.size() - 1).revisionNumber();
+            }
         }
+        notifyListeners(stateMachine, operation, key, value, version);
     }
 }

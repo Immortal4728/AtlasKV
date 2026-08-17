@@ -181,19 +181,28 @@ export default function PrefixPage() {
                     <td className="py-3 px-4">
                       <div className="flex flex-wrap items-center gap-1.5">
                         {item.leaseId && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-400 border border-purple-500/25 text-[10px] font-mono font-semibold">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 text-[10px] font-mono font-semibold">
                             <Clock className="h-3 w-3" />
                             {item.leaseId}
                           </span>
                         )}
                         {item.ttlRemaining != null && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/25 text-[10px] font-mono font-semibold">
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold border',
+                              item.ttlRemaining <= 5000
+                                ? 'bg-rose-500/20 text-rose-700 dark:text-rose-300 border-rose-500/40 animate-pulse'
+                                : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                            )}
+                          >
                             <Timer className="h-3 w-3" />
                             {Math.ceil(item.ttlRemaining / 1000)}s remaining
                           </span>
                         )}
                         {!item.leaseId && item.ttlRemaining == null && (
-                          <span className="text-neutral-500 dark:text-neutral-500 font-semibold">—</span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-neutral-200/50 dark:bg-neutral-800/50 text-neutral-600 dark:text-neutral-400 border border-neutral-300/50 dark:border-neutral-700/50 text-[10px] font-mono font-medium">
+                            Persistent
+                          </span>
                         )}
                       </div>
                     </td>
